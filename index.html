@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Episode Log</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Episode Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f3f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0e15" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+/* Layout: poster shelf → show page with one row of episode tiles per season → bottom sheet for rating */
+:root {
+  --bg: #f3f2f7; --surface: #ffffff; --surface-2: #e8e7ef; --fg: #17161f; --muted: #6b6980;
+  --line: #d9d7e3; --accent: #5b3fd9; --accent-fg: #ffffff; --danger: #c62f3c;
+  --r-top: #6fcfff; --r-good: #3dbb62; --r-mid: #f2c531; --r-low: #e5484d; --r-none: #b9b7c6;
+  --r-ink: #10141c; --r-none-ink: #4b4a58;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow: 0 10px 30px rgb(20 16 40 / .18);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f0e15; --surface: #1a1823; --surface-2: #252232; --fg: #f1f0f7; --muted: #9a97ae;
+  --line: #2e2b3c; --accent: #8f7bff; --accent-fg: #0f0e15; --danger: #ff6b74;
+  --r-none: #3a3748; --r-none-ink: #b3b0c4; --shadow: 0 10px 30px rgb(0 0 0 / .5); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f0e15; --surface: #1a1823; --surface-2: #252232; --fg: #f1f0f7; --muted: #9a97ae;
+  --line: #2e2b3c; --accent: #8f7bff; --accent-fg: #0f0e15; --danger: #ff6b74;
+  --r-none: #3a3748; --r-none-ink: #b3b0c4; --shadow: 0 10px 30px rgb(0 0 0 / .5); color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 880px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px 96px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); display: flex; align-items: center; gap: 12px; padding-block: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.brand svg { width: 34px; height: 34px; flex: none; }
+.brand h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.btn { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; background: var(--surface-2); display: inline-flex; align-items: center; gap: 6px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); }
+.btn.danger { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); }
+.btn.ghost { background: transparent; }
+.iconbtn { border: 0; background: var(--surface-2); width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; flex: none; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); margin: 4px 0 18px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* Library */
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 14px; }
+.card { border: 0; padding: 0; background: none; text-align: left; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.poster { position: relative; aspect-ratio: 2 / 3; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden; background: var(--surface-2); box-shadow: var(--shadow); }
+.poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.poster .ph { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--muted); background: linear-gradient(160deg, var(--surface-2), var(--surface)); }
+.badge { position: absolute; top: 8px; right: 8px; min-width: 42px; padding: 3px 8px; border-radius: 8px; font-weight: 800; font-size: 15px; text-align: center; font-variant-numeric: tabular-nums; }
+.card .name { font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.card .sub { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 4px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar b { display: block; height: 100%; background: var(--accent); }
+
+.empty { text-align: center; padding: 48px 12px; display: grid; justify-items: center; gap: 14px; }
+.empty svg { width: 96px; height: 96px; }
+.empty p { color: var(--muted); max-width: 34ch; margin: 0; }
+
+/* Show page */
+.hero { display: flex; gap: 16px; align-items: flex-end; margin: 6px 0 22px; }
+.hero .poster { width: 120px; flex: none; }
+.hero .meta { min-width: 0; display: grid; gap: 8px; }
+.hero h2 { font-size: clamp(24px, 6vw, 36px); font-weight: 800; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: var(--muted); }
+.stat b { display: block; font-size: 17px; color: var(--fg); font-variant-numeric: tabular-nums; }
+.seasons { display: grid; gap: 14px; }
+.season { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.season-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.season-head h3 { font-size: 18px; flex: 1; }
+.season-head .sub { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.eps { display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 8px; }
+.ep { border: 0; border-radius: 10px; aspect-ratio: 1; display: grid; place-content: center; text-align: center; gap: 0; padding: 2px; }
+.ep small { font-size: 10.5px; font-weight: 600; opacity: .75; }
+.ep strong { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ep:active { transform: scale(.95); }
+.ep { position: relative; }
+.ep .dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .7; }
+.typed { display: flex; gap: 8px; }
+.typed input { flex: 1; min-width: 0; font-size: 22px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; border: 2px solid var(--line); transition: background .15s, color .15s; }
+.typed input::placeholder { font-size: 15px; font-weight: 500; color: var(--muted); }
+.typed input.t-none { background: var(--bg); color: var(--fg); }
+.typed input.t-top { background: var(--r-top); color: var(--r-ink); border-color: var(--r-top); }
+.typed input.t-good { background: var(--r-good); color: var(--r-ink); border-color: var(--r-good); }
+.typed input.t-mid { background: var(--r-mid); color: var(--r-ink); border-color: var(--r-mid); }
+.typed input.t-low { background: var(--r-low); color: var(--r-ink); border-color: var(--r-low); }
+textarea { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); font: inherit; font-size: 16px; color: var(--fg); resize: vertical; min-height: 84px; }
+
+.t-top { background: var(--r-top); color: var(--r-ink); }
+.t-good { background: var(--r-good); color: var(--r-ink); }
+.t-mid { background: var(--r-mid); color: var(--r-ink); }
+.t-low { background: var(--r-low); color: var(--r-ink); }
+.t-none { background: var(--r-none); color: var(--r-none-ink); }
+
+/* Sheets */
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .45); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--surface); width: 100%; max-width: 560px; max-height: 92%; overflow-y: auto; border-radius: 20px 20px 0 0; padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 16px; box-shadow: var(--shadow); }
+@media (min-width: 620px) { .scrim { align-items: center; } .sheet { border-radius: 20px; } }
+.sheet h3 { font-size: 20px; }
+.sheet .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; }
+.picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.picker button { border: 0; border-radius: 10px; padding: 12px 0; font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; }
+.picker button.sel { outline: 3px solid var(--fg); outline-offset: 2px; }
+label.field { display: grid; gap: 6px; font-weight: 600; font-size: 13px; color: var(--muted); }
+input[type=text], input[type=number] { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); font-size: 16px; }
+input[type=number] { width: 84px; }
+.poster-pick { display: flex; gap: 14px; align-items: center; }
+.poster-pick .poster { width: 84px; flex: none; box-shadow: none; }
+.poster-pick .btns { display: grid; gap: 8px; }
+.season-list { display: grid; gap: 8px; }
+.season-list .srow { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: var(--bg); }
+.season-list .srow span { flex: 1; font-weight: 600; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.confirm { background: var(--bg); border: 1.5px solid var(--danger); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); }
+.note { font-size: 12px; color: var(--muted); text-align: center; margin: 0; }
+.backup { display: grid; justify-items: center; gap: 10px; margin-top: 32px; }
+.backup .row { display: flex; gap: 10px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap" id="app"></div>
+<input type="file" id="poster-file" accept="image/*" hidden>
+<input type="file" id="restore-file" accept="application/json,.json" hidden>
+
+<script>
+const LOGO = `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="14" width="56" height="40" rx="10" fill="var(--accent)"/><rect x="10" y="20" width="44" height="28" rx="5" fill="var(--bg)"/><path d="M22 4l10 10 10-10" stroke="var(--accent)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 25.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="var(--r-mid)"/><rect x="16" y="54" width="6" height="5" rx="1.5" fill="var(--accent)"/><rect x="42" y="54" width="6" height="5" rx="1.5" fill="var(--accent)"/></svg>`;
+const VALUES = Array.from({ length: 19 }, (_, i) => 1 + i * 0.5);
+const LS_KEY = "episode-log-v1";
+
+let shows = [];
+let view = { name: "library" };
+let sheet = null;          // {type:'rate', season, ep} | {type:'edit', draft, confirmDelete}
+let pendingPosterFor = null;
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (n) => (n == null ? "–" : Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, ""));
+const avgFmt = (n) => (n == null ? "–" : n.toFixed(2).replace(/0$/, "").replace(/\.0$/, ""));
+
+function tier(r) {
+  if (r == null || r <= 0) return "t-none";
+  if (r >= 9) return "t-top";
+  if (r >= 7.5) return "t-good";
+  if (r >= 5.5) return "t-mid";
+  return "t-low";
+}
+
+function statsOf(list) {
+  const rated = list.filter((r) => r != null && r > 0);
+  return { rated: rated.length, total: list.length, avg: rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null };
+}
+const showEps = (s) => s.seasons.flat();
+
+/* ---------- storage ---------- */
+function saveLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(shows)); }
+  catch { toast("Your phone is out of space for this app. Back up, then remove a poster or two."); }
+}
+function loadLocal() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; } }
+
+async function persist(show) {
+  const i = shows.findIndex((s) => s.id === show.id);
+  if (i >= 0) shows[i] = show; else shows.push(show);
+  saveLocal();
+  render();
+}
+async function removeShow(id) {
+  shows = shows.filter((s) => s.id !== id);
+  saveLocal();
+}
+
+/* ---------- poster handling ---------- */
+function readPoster(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const W = 400, H = 600;
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      const ctx = c.getContext("2d");
+      const scale = Math.max(W / img.width, H / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+    img.src = url;
+  });
+}
+
+$("#poster-file").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f || !sheet || sheet.type !== "edit") return;
+  try { sheet.draft.poster = await readPoster(f); renderSheet(); }
+  catch { toast("That file isn't an image this browser can open. Try a JPG or PNG."); }
+});
+
+/* ---------- rendering ---------- */
+function posterHTML(s) {
+  return s.poster ? `<img src="${s.poster}" alt="">` : `<div class="ph">${esc(s.name || "New series")}</div>`;
+}
+const legend = `<div class="legend" aria-label="Color key">
+  <span><i class="t-top"></i>9 – 10</span><span><i class="t-good"></i>7.5 – 8.5</span>
+  <span><i class="t-mid"></i>5.5 – 7</span><span><i class="t-low"></i>1 – 5</span><span><i class="t-none"></i>Unrated</span></div>`;
+
+function render() {
+  const app = $("#app");
+  if (view.name === "show") {
+    const s = shows.find((x) => x.id === view.id);
+    if (!s) { view = { name: "library" }; return render(); }
+    app.innerHTML = renderShow(s);
+  } else {
+    app.innerHTML = renderLibrary();
+  }
+  renderSheet();
+}
+
+function renderLibrary() {
+  const sorted = [...shows].sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  const body = sorted.length ? `<div class="shelf">${sorted.map((s) => {
+    const st = statsOf(showEps(s));
+    return `<button class="card" data-open="${s.id}">
+      <div class="poster">${posterHTML(s)}${st.avg != null ? `<span class="badge ${tier(st.avg)}">${avgFmt(st.avg)}</span>` : ""}</div>
+      <div class="name">${esc(s.name)}</div>
+      <div class="sub">${s.seasons.length} season${s.seasons.length === 1 ? "" : "s"} · ${st.rated}/${st.total} rated</div>
+      <div class="bar"><b style="width:${st.total ? (st.rated / st.total) * 100 : 0}%"></b></div>
+    </button>`;
+  }).join("")}</div>` : `<div class="empty">${LOGO}<h2>Nothing on the shelf yet</h2>
+    <p>Add the series you're watching, pick a poster from your photos or files, and rate each episode as you go.</p>
+    <button class="btn primary" data-act="add">＋ Add series</button></div>`;
+  return `<header class="top"><div class="brand">${LOGO}<h1>Episode Log</h1></div>
+    ${shows.length ? `<button class="btn primary" data-act="add">＋ Add series</button>` : ""}</header>
+    ${legend}${body}
+    <div class="backup"><p class="note">Your ratings are saved on this phone. Back up now and then so you never lose them.</p>
+      <div class="row"><button class="btn" data-act="backup">Back up</button><button class="btn" data-act="restore">Restore</button></div></div>`;
+}
+
+function renderShow(s) {
+  const st = statsOf(showEps(s));
+  return `<header class="top"><button class="iconbtn" data-act="back" aria-label="Back to all series">‹</button>
+    <div class="brand"></div><button class="btn" data-act="edit">Edit</button></header>
+    <div class="hero"><div class="poster">${posterHTML(s)}</div>
+      <div class="meta"><h2>${esc(s.name)}</h2>
+        <div class="stats">
+          <div class="stat"><b class="avgchip">${avgFmt(st.avg)}</b>Average</div>
+          <div class="stat"><b>${st.rated}/${st.total}</b>Rated</div>
+        </div></div></div>
+    ${legend}
+    <div class="seasons">${s.seasons.map((eps, si) => {
+      const ss = statsOf(eps);
+      return `<section class="season"><div class="season-head"><h3>Season ${si + 1}</h3>
+        <span class="sub">${ss.rated}/${ss.total}</span>
+        <span class="badge ${tier(ss.avg)}" style="position:static">${avgFmt(ss.avg)}</span></div>
+        <div class="eps">${eps.map((r, ei) => `<button class="ep ${tier(r)}" data-rate="${si}:${ei}" aria-label="Season ${si + 1} episode ${ei + 1}, ${r ? "rated " + fmt(r) : "unrated"}">
+          ${s.notes?.[si + ":" + ei] ? '<i class="dot" aria-label="Has notes"></i>' : ""}<small>E${ei + 1}</small><strong>${r ? fmt(r) : "–"}</strong></button>`).join("")}</div></section>`;
+    }).join("")}</div>`;
+}
+
+function updateRateSheet(scrim) {
+  const s = shows.find((x) => x.id === view.id);
+  if (!s) return;
+  const cur = s.seasons[sheet.season][sheet.ep];
+  scrim.querySelectorAll("[data-val]").forEach((b) => b.classList.toggle("sel", +b.dataset.val === cur));
+  const inp = scrim.querySelector("#f-rating");
+  inp.className = cur ? tier(cur) : "t-none";
+  if (document.activeElement !== inp) inp.value = cur ? fmt(cur) : "";
+  const note = scrim.querySelector("#f-note");
+  if (document.activeElement !== note) note.value = s.notes?.[sheet.season + ":" + sheet.ep] || "";
+}
+
+function renderSheet() {
+  const existing = document.querySelector(".scrim");
+  if (sheet?.type === "rate" && existing?.dataset.key === sheet.season + ":" + sheet.ep) return updateRateSheet(existing);
+  existing?.remove();
+  if (!sheet) return;
+  const scrim = document.createElement("div");
+  scrim.className = "scrim";
+  scrim.dataset.act = "close";
+  if (sheet.type === "rate") {
+    scrim.dataset.key = sheet.season + ":" + sheet.ep;
+    scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="Rate episode">
+      <div class="row"><h3 class="grow">S${sheet.season + 1} · Episode ${sheet.ep + 1}</h3>
+        <button class="iconbtn" data-act="close" aria-label="Close">✕</button></div>
+      <div class="typed"><input type="text" id="f-rating" autocomplete="off" enterkeyhint="done" placeholder="Type 1–10, then Enter" aria-label="Rating out of 10">
+        <button class="btn primary" data-act="apply-rating">Set</button></div>
+      <p class="hint">Delete the number and press Enter to clear a rating.</p>
+      <label class="field">Notes<textarea id="f-note" rows="3" maxlength="2000" placeholder="What stood out in this episode?"></textarea></label>
+      <div class="row"><button class="btn ghost" data-act="prev-ep">‹ Previous</button><span class="grow"></span>
+        <button class="btn ghost" data-act="next-ep">Next ›</button></div></div>`;
+    document.body.appendChild(scrim);
+    updateRateSheet(scrim);
+    setTimeout(() => $("#f-rating")?.focus(), 50);
+    return;
+  } else {
+    const d = sheet.draft;
+    const isNew = !shows.some((x) => x.id === d.id);
+    scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="${isNew ? "Add series" : "Edit series"}">
+      <div class="row"><h3 class="grow">${isNew ? "Add series" : "Edit series"}</h3>
+        <button class="iconbtn" data-act="close" aria-label="Close">✕</button></div>
+      <div class="poster-pick"><div class="poster">${posterHTML(d)}</div>
+        <div class="btns"><button class="btn" data-act="pick-poster">${d.poster ? "Change poster" : "Choose poster"}</button>
+        ${d.poster ? `<button class="btn ghost" data-act="clear-poster">Remove</button>` : ""}
+        <p class="hint">From your photos, camera or files</p></div></div>
+      <label class="field">Name<input type="text" id="f-name" value="${esc(d.name)}" placeholder="Game of Thrones" autocomplete="off"></label>
+      <label class="field">Number of seasons<input type="number" id="f-seasons" min="1" max="60" inputmode="numeric" value="${d.seasons.length}"></label>
+      <div class="field" style="display:grid;gap:8px"><span style="font-weight:600;font-size:13px;color:var(--muted)">Episodes in each season</span>
+        <div class="season-list">${d.seasons.map((eps, i) => `<div class="srow"><span>Season ${i + 1}</span>
+          <input type="number" id="f-eps-${i}" data-eps="${i}" min="1" max="200" inputmode="numeric" value="${eps.length}" aria-label="Episodes in season ${i + 1}"></div>`).join("")}</div>
+        ${isNew ? "" : `<p class="hint">Lowering a count removes the last episodes in that season, along with their ratings.</p>`}</div>
+      <div class="row"><button class="btn primary grow" data-act="save">${isNew ? "Add series" : "Save changes"}</button></div>
+      ${isNew ? "" : sheet.confirmDelete
+        ? `<div class="confirm"><b>Delete ${esc(d.name || "this series")} and all its ratings?</b>
+            <div class="row"><button class="btn danger" data-act="delete-yes">Delete</button><button class="btn" data-act="delete-no">Keep it</button></div></div>`
+        : `<button class="btn danger" data-act="delete">Delete series</button>`}
+    </div>`;
+  }
+  document.body.appendChild(scrim);
+}
+
+function toast(msg) {
+  document.querySelector(".toast")?.remove();
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ---------- interactions ---------- */
+function newDraft() {
+  return { id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: "", poster: null, seasons: [Array(10).fill(null)] };
+}
+function resizeSeason(arr, n) {
+  n = Math.max(1, Math.min(200, n | 0 || 1));
+  return arr.length >= n ? arr.slice(0, n) : arr.concat(Array(n - arr.length).fill(null));
+}
+
+document.addEventListener("input", (e) => {
+  if (!sheet || sheet.type !== "edit") return;
+  const d = sheet.draft;
+  if (e.target.id === "f-name") d.name = e.target.value;
+  if (e.target.dataset.eps != null) {
+    const i = +e.target.dataset.eps;
+    if (e.target.value !== "") d.seasons[i] = resizeSeason(d.seasons[i], +e.target.value);
+  }
+});
+document.addEventListener("change", (e) => {
+  if (!sheet || sheet.type !== "edit" || e.target.id !== "f-seasons") return;
+  const n = Math.max(1, Math.min(60, +e.target.value || 1));
+  const d = sheet.draft;
+  const last = d.seasons[d.seasons.length - 1]?.length || 10;
+  while (d.seasons.length < n) d.seasons.push(Array(last).fill(null));
+  d.seasons.length = n;
+  renderSheet();
+  $("#f-seasons")?.focus();
+});
+
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-act],[data-open],[data-rate],[data-val]");
+  if (!el) return;
+  if (el.classList.contains("scrim") && e.target !== el) return;
+  const act = el.dataset.act;
+
+  if (el.dataset.open) { view = { name: "show", id: el.dataset.open }; window.scrollTo(0, 0); return render(); }
+  if (el.dataset.rate) { const [si, ei] = el.dataset.rate.split(":").map(Number); sheet = { type: "rate", season: si, ep: ei }; return renderSheet(); }
+  if (el.dataset.val != null) return setRating(+el.dataset.val);
+  switch (act) {
+    case "add": sheet = { type: "edit", draft: newDraft() }; renderSheet(); setTimeout(() => $("#f-name")?.focus(), 50); break;
+    case "edit": sheet = { type: "edit", draft: structuredClone(shows.find((x) => x.id === view.id)) }; renderSheet(); break;
+    case "back": view = { name: "library" }; render(); break;
+    case "close": flushNote(); sheet = null; renderSheet(); break;
+    case "apply-rating": applyTyped(); break;
+    case "backup": backup(); break;
+    case "restore": $("#restore-file").click(); break;
+    case "pick-poster": $("#poster-file").click(); break;
+    case "clear-poster": sheet.draft.poster = null; renderSheet(); break;
+    case "prev-ep": case "next-ep": flushNote(); advance(shows.find((x) => x.id === view.id), act === "next-ep" ? 1 : -1, true); renderSheet(); break;
+    case "save": {
+      const d = sheet.draft;
+      d.name = d.name.trim();
+      if (!d.name) { toast("Give the series a name first."); $("#f-name")?.focus(); return; }
+      d.updated = Date.now();
+      // drop notes for episodes that no longer exist
+      d.notes = Object.fromEntries(Object.entries(d.notes || {}).filter(([k]) => { const [a, b] = k.split(":").map(Number); return a < d.seasons.length && b < d.seasons[a].length; }));
+      sheet = null;
+      view = { name: "show", id: d.id };
+      persist(d);
+      break;
+    }
+    case "delete": sheet.confirmDelete = true; renderSheet(); break;
+    case "delete-no": sheet.confirmDelete = false; renderSheet(); break;
+    case "delete-yes": { const id = sheet.draft.id, name = sheet.draft.name; sheet = null; view = { name: "library" }; removeShow(id).then(render); render(); toast(`Deleted ${name}`); break; }
+  }
+});
+
+function advance(s, dir, keepOpenAtEnds) {
+  let { season, ep } = sheet;
+  ep += dir;
+  if (ep >= s.seasons[season].length) { season++; ep = 0; }
+  if (ep < 0) { season--; ep = season >= 0 ? s.seasons[season].length - 1 : 0; }
+  if (season < 0 || season >= s.seasons.length) { if (!keepOpenAtEnds) sheet = null; return; }
+  sheet = { type: "rate", season, ep };
+}
+
+function setRating(v) {
+  const s = structuredClone(shows.find((x) => x.id === view.id));
+  s.seasons[sheet.season][sheet.ep] = v > 0 ? v : null;
+  s.updated = Date.now();
+  persist(s);
+}
+
+function applyTyped() {
+  const inp = $("#f-rating");
+  const raw = inp.value.trim().replace(",", ".");
+  if (raw === "") { setRating(0); return; }
+  const v = Number(raw);
+  if (!Number.isFinite(v) || v < 0 || v > 10) { toast("Type a number from 1 to 10, like 7 or 8.5."); inp.select(); return; }
+  setRating(Math.round(v * 10) / 10);
+  inp.blur();
+  updateRateSheet(document.querySelector(".scrim"));
+}
+
+let noteTimer = null;
+function flushNote() {
+  clearTimeout(noteTimer);
+  const ta = $("#f-note");
+  if (!ta || !sheet || sheet.type !== "rate") return;
+  const s = shows.find((x) => x.id === view.id);
+  const key = sheet.season + ":" + sheet.ep;
+  const text = ta.value.trim();
+  if ((s.notes?.[key] || "") === text) return;
+  const next = structuredClone(s);
+  next.notes = { ...(next.notes || {}) };
+  if (text) next.notes[key] = text; else delete next.notes[key];
+  persist(next);
+}
+document.addEventListener("input", (e) => {
+  if (e.target.id === "f-note") { clearTimeout(noteTimer); noteTimer = setTimeout(flushNote, 800); }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.id === "f-rating") { e.preventDefault(); applyTyped(); return; }
+  if (e.key === "Escape" && sheet) { flushNote(); sheet = null; renderSheet(); }
+});
+
+async function backup() {
+  const name = "episode-log-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  const file = new File([JSON.stringify({ app: "episode-log", version: 1, shows })], name, { type: "application/json" });
+  try {
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Episode Log backup" }); return; }
+  } catch (e) { if (e.name === "AbortError") return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(file); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+$("#restore-file").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const list = Array.isArray(data) ? data : data.shows;
+    if (!Array.isArray(list) || !list.every((x) => x.id && Array.isArray(x.seasons))) throw new Error();
+    list.forEach((x) => { const i = shows.findIndex((s) => s.id === x.id); if (i >= 0) shows[i] = x; else shows.push(x); });
+    saveLocal(); view = { name: "library" }; render();
+    toast(`Restored ${list.length} series`);
+  } catch { toast("That file isn't an Episode Log backup."); }
+});
+
+navigator.storage?.persist?.().catch(() => {});
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+shows = loadLocal();
+render();
+</script>
+
+</body>
+</html>
