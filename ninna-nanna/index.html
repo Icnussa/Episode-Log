@@ -1,0 +1,1192 @@
+<!doctype html><html><head><meta charset=utf8><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Ninna Nanna"><meta name="theme-color" content="#000000"><link rel="apple-touch-icon" href="icon-180.png"><link rel="manifest" href="manifest.webmanifest"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ninna Nanna</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one phone column on true black, a floating pill tab bar, a night-sky alarm screen, and full-screen dark overlays for the night and the alarm.
+   One deliberate dark look: warm amber for quality, ice blue for sleep, indigo for deep sleep, violet for dreams. No greens. */
+:root{
+  --bg:#000; --panel:#141416; --panel2:#1f1f22; --line:#2a2a2e; --ink:#f3f1ec; --mute:#8f8d88; --dim:#55544f;
+  --dawn:#f2a96b; --onDawn:#1f1206; --q1:#f2671e; --q2:#f7cdab; --dot:#fbf1dc;
+  --awake:#9b9a96; --light:#86b9e6; --deep:#3f5fc4; --dream:#c95fe0;
+  --talk:#c9a2e6; --cough:#ec8b7f; --up:#86b9e6; --down:#ec8b7f;
+  --sky1:#07060b; --sky2:#0c1424; --sky3:#183456; --tabbg:rgba(38,38,42,.82);
+  --fd:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --fb:"Figtree","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+body.sky{background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 42%,var(--sky3) 100%) fixed}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+button:disabled{cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--dawn);outline-offset:2px}
+#stars{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+#app{position:relative;z-index:1;max-width:540px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px calc(118px + env(safe-area-inset-bottom,0px))}
+.view{display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--fd);font-weight:500;font-size:44px;line-height:1.05;margin:0;letter-spacing:-.02em}
+h2{font-family:var(--fd);font-weight:700;font-size:28px;line-height:1.15;margin:0;text-wrap:balance}
+h3{font-family:var(--fd);font-weight:500;font-size:24px;margin:0;letter-spacing:-.01em}
+.eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.hint{color:var(--mute);font-size:14px;margin:0}
+.card{background:var(--panel);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rule{height:1px;background:var(--line);border:0;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--mute);display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.chip.add{border-style:dashed}
+.chip .x{opacity:.7;font-size:16px;line-height:1}
+.face{width:22px;height:22px;flex:none}
+.moods .chip{padding:10px 16px}
+.outline{border:1.5px solid var(--ink);border-radius:999px;padding:12px 22px;font-weight:500;font-size:16px;align-self:flex-start}
+.ghost{border:1px solid var(--line);border-radius:14px;padding:12px;font-size:15px;color:var(--ink)}
+.small{padding:8px 14px;font-size:14px;border-radius:12px}
+.more{background:var(--panel2);border-radius:999px;padding:8px 14px;font-size:15px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.more svg,.chev{width:16px;height:16px}
+.msg{background:var(--panel2);border-radius:14px;padding:14px;margin:0;font-size:15px;display:flex;flex-direction:column;gap:10px}
+.addrow{display:flex;gap:8px}
+.addrow input{flex:1;min-width:0;background:var(--panel2);border:0;border-radius:12px;color:var(--ink);font:inherit;padding:10px 12px}
+textarea{width:100%;min-height:80px;background:var(--panel2);border:0;border-radius:12px;color:var(--ink);font:inherit;padding:12px;resize:vertical}
+.num{font-family:var(--fd);font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+/* ---- bottom tab bar ---- */
+.tabs{position:fixed;z-index:15;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:508px;margin:0 auto;display:flex;gap:2px;padding:6px;border-radius:999px;background:var(--tabbg);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.tabs button{flex:1;min-width:0;border-radius:999px;padding:9px 2px 8px;font-size:12.5px;font-weight:500;color:var(--ink);opacity:.82;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button svg{width:24px;height:24px}
+.tabs button[aria-current="page"]{background:rgba(0,0,0,.55);opacity:1}
+
+/* ---- sleep (alarm) screen ---- */
+.aidpill{display:flex;align-items:center;gap:12px;width:100%;border:1.5px solid rgba(255,255,255,.75);border-radius:999px;padding:14px 20px;background:rgba(255,255,255,.06);font-size:19px;font-weight:500}
+.aidpill .grow{flex:1;text-align:left}
+.aidpill svg{width:22px;height:22px;flex:none}
+.pages{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-inline:-4px}
+.pages::-webkit-scrollbar{display:none}
+.page{flex:0 0 100%;scroll-snap-align:center;padding:30px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
+.wheel{position:relative;display:flex;justify-content:center;align-items:center;height:216px;width:100%}
+.wheel::before{content:"";position:absolute;left:50%;top:72px;transform:translateX(-50%);width:min(320px,94%);height:72px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(255,255,255,.04);pointer-events:none}
+.col{height:216px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;width:84px;-webkit-mask-image:linear-gradient(transparent,#000 34%,#000 66%,transparent);mask-image:linear-gradient(transparent,#000 34%,#000 66%,transparent);overscroll-behavior:contain}
+.col::-webkit-scrollbar{display:none}
+.col div{height:72px;line-height:72px;scroll-snap-align:center;text-align:center;font-family:var(--fd);font-weight:500;font-size:50px;font-variant-numeric:tabular-nums}
+.col.ap{width:78px}.col.ap div{font-size:40px}
+.col .pad{scroll-snap-align:none}
+.colon{font-family:var(--fd);font-size:46px;font-weight:500;padding-bottom:6px}
+.wheel.off{opacity:.35}
+.wake{font-size:19px;line-height:1.45;margin:0;max-width:300px}
+.wake b{font-weight:500;font-variant-numeric:tabular-nums}
+.noalarm{height:216px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.noalarm svg{width:64px;height:64px}
+.start{align-self:center;width:min(300px,82%);padding:22px;border-radius:999px;background:#111114;border:1.5px solid rgba(242,214,180,.7);box-shadow:0 0 40px rgba(146,190,230,.35),0 0 0 6px rgba(255,255,255,.03);font-family:var(--fd);font-weight:500;font-size:26px;color:var(--ink)}
+.dots{display:flex;justify-content:center;gap:12px}
+.dots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.3)}
+.dots i.on{background:var(--ink)}
+.down{align-self:center;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--mute);font-size:14px;margin-top:8px}
+.down svg{width:20px;height:20px}
+.skycard{background:rgba(10,14,24,.62);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.07)}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);font-size:20px;line-height:1}
+.stepper .v{font-family:var(--fd);font-weight:500;font-size:22px;min-width:84px;text-align:center;font-variant-numeric:tabular-nums}
+.tog{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:16px}
+.tog input{appearance:none;-webkit-appearance:none;width:50px;height:30px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .2s;margin:0}
+.tog input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--ink);transition:transform .2s}
+.tog input:checked{background:var(--light)}
+.tog input:checked::after{transform:translateX(20px)}
+.steps{margin:0;padding-left:20px;color:var(--mute);font-size:14px;display:flex;flex-direction:column;gap:4px}
+
+/* ---- journal ---- */
+.jhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:18px}
+.jhead h1{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.jhead small{font-family:var(--fb);font-size:16px;font-weight:500;color:var(--mute);letter-spacing:0}
+.round{width:52px;height:52px;border-radius:50%;background:var(--panel2);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.round svg{width:24px;height:24px}
+.week{display:grid;grid-template-columns:repeat(7,1fr) 1.15fr;gap:4px;align-items:center;padding-block:4px 2px;border-block:1px solid var(--line);padding:14px 0}
+.dayr{position:relative;aspect-ratio:1;max-width:52px;width:100%;justify-self:center;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:17px;color:var(--dim)}
+.dayr svg{position:absolute;inset:0;width:100%;height:100%}
+.dayr.has{color:var(--mute)}
+.dayr.sel{color:var(--ink);font-weight:500}
+.week .round{width:48px;height:48px;justify-self:end}
+.hero{display:flex;align-items:center;gap:22px}
+.ringq{position:relative;width:150px;height:150px;flex:none}
+.ringq svg{width:100%;height:100%}
+.ringq span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringq b{font-family:var(--fd);font-weight:500;font-size:46px;line-height:1}
+.ringq b small{font-size:20px}
+.ringq em{font-style:normal;font-size:15px;color:var(--ink);opacity:.85}
+.big2{display:flex;flex-direction:column;gap:14px;min-width:0}
+.big2 .num{font-size:34px;line-height:1.05}
+.big2 .hint{font-size:16px;color:var(--ink);opacity:.75}
+.seg{display:flex;gap:10px;align-items:center}
+.seg button{border-radius:999px;background:var(--panel2);height:48px;padding:0 18px;display:inline-flex;align-items:center;gap:10px;font-size:17px;font-weight:500;position:relative}
+.seg button svg{width:22px;height:22px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg .badge{position:absolute;top:-8px;right:-6px;background:var(--panel2);border:2px solid var(--bg);border-radius:999px;font-size:12px;padding:1px 7px;color:var(--ink)}
+.graphwrap{position:relative}
+.tip{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap;border:1px solid var(--line);background:rgba(10,10,12,.9);border-radius:999px;padding:6px 14px;font-size:15px;display:flex;align-items:center;gap:8px;pointer-events:none}
+.tip i{width:12px;height:12px;border-radius:50%}
+.tip b{font-weight:500;color:var(--light)}
+canvas.graph{width:100%;display:block;touch-action:pan-y}
+.legend4{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;background:var(--panel);border-radius:20px;padding:18px 20px}
+.legend4 span{display:flex;align-items:center;gap:10px;font-size:17px;color:var(--mute)}
+.legend4 i{width:14px;height:14px;border-radius:50%;flex:none}
+.legend4 b{font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:22px 14px}
+.fact{display:flex;gap:12px;align-items:flex-start;min-width:0;text-align:left}
+.fact svg{width:30px;height:30px;flex:none;color:var(--light);margin-top:4px}
+.fact .num{font-size:30px;line-height:1.1;display:block}
+.fact .lab{color:var(--mute);font-size:15px;display:flex;align-items:center;gap:2px}
+.notesum{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tagpill{background:var(--panel2);border-radius:999px;padding:6px 12px;font-size:14px}
+.meter3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:100%}
+.meter3 i{height:8px;border-radius:4px;background:var(--panel2)}
+.cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.cardhead svg{width:26px;height:26px;color:var(--light);flex:none}
+.bigstat{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.bigstat .num{font-size:42px;line-height:1}
+.bigstat .lvl{display:flex;flex-direction:column;gap:8px;min-width:140px;flex:1;max-width:220px}
+.bigstat .lvl b{font-size:14px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.kind{display:flex;flex-direction:column;gap:6px}
+.kind h4{font-family:var(--fb);font-weight:600;font-size:21px;margin:8px 0 0}
+.clip{display:flex;flex-direction:column;gap:6px;padding-block:8px}
+.clip .t{font-family:var(--fd);font-size:20px;color:var(--mute);font-variant-numeric:tabular-nums}
+.cliprow{display:flex;align-items:center;gap:12px}
+.play{width:36px;height:36px;flex:none;display:inline-flex;align-items:center;justify-content:center;color:var(--light)}
+.play svg{width:26px;height:26px}
+.wave{flex:1;min-width:0;height:44px;display:flex;align-items:center;gap:2px;position:relative}
+.wave span{flex:1;min-width:1px;border-radius:2px;background:var(--light);opacity:.55}
+.wave .hl{position:absolute;top:0;bottom:0;border-radius:8px;opacity:.35}
+.wave span.on{opacity:1;background:var(--ink)}
+
+/* ---- statistics ---- */
+.segbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--panel2);border-radius:999px;padding:0;margin-inline:-2px;box-shadow:0 0 0 10px var(--bg)}
+.segbar button{padding:12px 4px;border-radius:999px;font-size:17px;font-weight:500;color:var(--ink)}
+.segbar button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+body.sky::before{background:var(--sky1)}
+.sec{font-family:var(--fd);font-weight:700;font-size:34px;margin:14px 0 0;letter-spacing:-.01em}
+.chartcard{display:flex;flex-direction:column;gap:10px}
+.chartcard .row h3{font-size:30px;font-weight:300}
+.chart{width:100%;overflow:hidden}
+.chart svg{display:block;width:100%}
+.chart svg text{font-family:var(--fb);fill:var(--mute)}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px 14px}
+.stat .num{font-size:26px;display:block}
+.stat .d{font-size:13px;color:var(--mute)}
+.stat .d.up{color:var(--up)}.stat .d.dn{color:var(--down)}
+.impact{display:grid;grid-template-columns:minmax(0,1fr) 110px 52px;align-items:center;gap:12px 12px;font-size:15px}
+.impact .bar{position:relative;height:10px;background:var(--panel2);border-radius:5px}
+.impact .bar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;border-left:1px solid var(--mute);opacity:.5}
+.impact .bar i{position:absolute;top:0;bottom:0;border-radius:5px}
+.impact .n{font-family:var(--fd);font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.impact .n.up{color:var(--up)}.impact .n.dn{color:var(--down)}
+.impact small{display:block;color:var(--mute);font-size:12px}
+
+/* ---- profile ---- */
+.pstats{display:grid;grid-template-columns:1fr 1fr;gap:26px 14px;padding-top:26px}
+.pstat{display:flex;gap:14px;align-items:flex-start}
+.pstat svg{width:36px;height:36px;flex:none;margin-top:4px}
+.pstat .num{font-size:40px;line-height:1.05;display:block}
+.pstat .lab{color:var(--mute);font-size:16px}
+.link{display:flex;align-items:center;gap:16px;width:100%;background:var(--panel2);border-radius:22px;padding:20px 22px;font-size:19px;text-align:left}
+.link .grow{flex:1}
+.link .val{color:var(--mute)}
+.set{border-top:1px solid var(--line)}
+.set:last-child{border-bottom:1px solid var(--line)}
+.set>summary,.set>.head{list-style:none;display:flex;align-items:center;gap:16px;padding:20px 2px;cursor:pointer;font-size:19px}
+.set>summary::-webkit-details-marker{display:none}
+.set .ic{width:30px;height:30px;flex:none;color:var(--light)}
+.set .grow{flex:1;min-width:0}
+.set .val{color:var(--mute);font-size:17px;white-space:nowrap}
+.set .chev{transition:transform .2s;color:var(--mute);width:18px;height:18px}
+.set[open] .chev{transform:rotate(90deg)}
+.set .body{padding:0 2px 20px 46px;display:flex;flex-direction:column;gap:12px}
+.set .body p,.set .body li{font-size:15px;color:var(--mute);margin:0}
+.set .body ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+
+/* ---- bottom sheet ---- */
+.scrim{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:540px;max-height:86%;overflow-y:auto;background:#121214;border-radius:26px 26px 0 0;border-top:1px solid var(--line);padding:10px max(18px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--line);align-self:center}
+.nlist{display:flex;flex-direction:column}
+.nrow{display:flex;align-items:center;gap:14px;padding:14px 2px;border-bottom:1px solid var(--line);text-align:left;width:100%}
+.nrow .grow{flex:1;min-width:0}
+.nrow .q{font-family:var(--fd);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.minir{width:40px;height:40px;flex:none}
+
+/* ---- night and alarm overlays ---- */
+.overlay{position:fixed;inset:0;background:#000;z-index:40;color:#5d6276;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.overlay[hidden]{display:none!important}
+#nsInner{display:flex;flex-direction:column;align-items:center;gap:10px;transition:transform 2s ease;text-align:center;padding:16px}
+#nsClock{font-family:var(--fd);font-weight:300;font-size:88px;line-height:1;font-variant-numeric:tabular-nums;color:#6b7086}
+#nightScreen.bright #nsClock{color:#ecebe6}
+.meter{width:120px;height:4px;background:#15192a;border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:#3b4266}
+#nsAidStop{color:#6b7086;text-decoration:underline;font-size:13px}
+#endBtn{margin-top:28px;border:1px solid #23283d;color:#6b7086;border-radius:999px;padding:12px 26px}
+#ringScreen{background:radial-gradient(circle at 50% 110%,#f2a96b 0%,#6b4a5e 38%,#0c0c10 75%);color:#f3efe6}
+.ring-inner{display:flex;flex-direction:column;gap:14px;align-items:stretch;width:min(360px,100% - 32px);text-align:center}
+#rsClock{font-family:var(--fd);font-weight:500;font-size:96px;line-height:1;font-variant-numeric:tabular-nums}
+#snoozeBtn{background:rgba(255,255,255,.12);border-radius:16px;padding:16px;font-size:18px}
+#upBtn{background:#f2a96b;color:#1f1206;border-radius:16px;padding:18px;font-family:var(--fd);font-weight:500;font-size:22px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:14px;font-size:14px;z-index:50;width:min(440px,100% - 32px)}
+@media (max-width:390px){h1{font-size:38px}.ringq{width:128px;height:128px}.ringq b{font-size:38px}.big2 .num{font-size:28px}.fact .num{font-size:25px}.pstat .num{font-size:32px}.col{width:72px}.col div{font-size:44px}.tabs button{font-size:11.5px}.impact{grid-template-columns:minmax(0,1fr) 80px 48px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<canvas id="stars" aria-hidden="true"></canvas>
+<div id="app">
+  <main>
+    <section id="v-tonight" class="view">
+      <div class="aidpill"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 17.5V6l11-2.5v11.2a2.8 2.8 0 1 1-1.6-2.5V7.5L10.6 9.3v8.4a2.8 2.8 0 1 1-1.6-.2z"/></svg><button class="grow" id="aidPill"><span id="aidName">Sleep aid</span></button><button id="aidPlay" aria-label="Preview the sleep aid"></button></div>
+      <div class="pages" id="pages">
+        <div class="page">
+          <div class="wheel" id="wheel"></div>
+          <p class="wake" id="wakeText"></p>
+        </div>
+        <div class="page">
+          <div class="noalarm"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M40 8a24 24 0 1 0 16 41.5A26 26 0 0 1 40 8z" fill="#f2a96b"/></svg><h3>No alarm</h3></div>
+          <p class="wake">Track the night without an alarm. End it yourself when you get up.</p>
+        </div>
+      </div>
+      <div class="dots" id="dots"><i class="on"></i><i></i></div>
+      <button id="startBtn" class="start">Start</button>
+      <div id="startMsg" class="msg" hidden></div>
+      <a class="down" href="#tonightOpts" id="toOpts"><span>Tonight</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></a>
+      <div id="tonightOpts" class="view" style="gap:14px;padding-top:120px"></div>
+      <button id="testSound" class="ghost"></button>
+    </section>
+    <section id="v-report" class="view" hidden></section>
+    <section id="v-trends" class="view" hidden></section>
+    <section id="v-more" class="view" hidden></section>
+  </main>
+
+  <nav class="tabs" aria-label="Sections">
+    <button data-v="tonight" aria-current="page"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.5 2.5a9.5 9.5 0 1 0 7 15.8A10.5 10.5 0 0 1 14.5 2.5z"/></svg>Sleep</button>
+    <button data-v="report"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3.5" y="3" width="3.5" height="18" rx="1"/><path d="M8.5 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-11zm3 4v1.6h6V7zm0 3.6v1.6h6v-1.6z" fill-rule="evenodd"/></svg>Journal</button>
+    <button data-v="trends"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="12" width="5" height="9" rx="1"/><rect x="9.5" y="4" width="5" height="17" rx="1"/><rect x="16" y="9" width="5" height="12" rx="1"/></svg>Statistics</button>
+    <button data-v="more"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4.2a3.4 3.4 0 1 1 0 6.8 3.4 3.4 0 0 1 0-6.8zm0 13.6a7.8 7.8 0 0 1-6-2.8c1.4-1.8 3.6-2.8 6-2.8s4.6 1 6 2.8a7.8 7.8 0 0 1-6 2.8z"/></svg>Profile</button>
+  </nav>
+</div>
+
+<div id="scrim" class="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<div id="nightScreen" class="overlay" hidden>
+  <div id="nsInner">
+    <div id="nsClock">00:00</div>
+    <div id="nsAlarm"></div>
+    <div id="nsStatus" style="font-size:13px"></div>
+    <button id="nsAidStop" hidden>Stop the sleep aid</button>
+    <div class="meter" aria-hidden="true"><i id="nsLevel"></i></div>
+    <button id="endBtn">End night</button>
+  </div>
+</div>
+
+<div id="ringScreen" class="overlay" hidden>
+  <div class="ring-inner">
+    <div class="eyebrow" style="color:#f3efe6">Buongiorno</div>
+    <div id="rsClock">07:00</div>
+    <p id="rsWhy" style="margin:0 0 18px"></p>
+    <button id="snoozeBtn">Snooze 9 min</button>
+    <button id="upBtn">I'm up</button>
+  </div>
+</div>
+
+<div id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KEY='dolcenotte.v1';
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const DAY=86400000;
+
+/* ---------- storage ---------- */
+function lsGet(k,d){try{const v=localStorage.getItem(KEY+'.'+k);return v?JSON.parse(v):d}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(KEY+'.'+k,JSON.stringify(v));return true}catch(e){return false}}
+let idbP=null;
+function idb(){if(!idbP)idbP=new Promise((res,rej)=>{try{const r=indexedDB.open('dolcenotte',1);r.onupgradeneeded=()=>r.result.createObjectStore('clips');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});return idbP}
+async function clipOp(mode,id,val){const db=await idb();return new Promise((res,rej)=>{const tx=db.transaction('clips',mode==='get'?'readonly':'readwrite');const st=tx.objectStore('clips');const r=mode==='get'?st.get(id):mode==='put'?st.put(val,id):st.delete(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+
+const DEFAULT_TAGS=['Coffee','Alcohol','Workout','Late meal','Stressful day','Nap','Screens in bed','Reading'];
+const S={settings:Object.assign({theme:'charcoal',alarm:'07:00',win:30,snore:true,motion:true,goal:480,sound:'chimes',snooze:'smart',aid:'off',aidMin:30,tags:DEFAULT_TAGS.slice(),tonight:[]},lsGet('settings',{})),
+  nights:lsGet('nights',[]),view:'tonight',reportId:null,T:null,wl:null,range:7,metric:'quality',clipKind:'all'};
+const saveSettings=()=>lsSet('settings',S.settings);
+const saveNights=()=>{if(!lsSet('nights',S.nights))toast("This phone's storage is full, so the last night may not be kept.")};
+
+/* ---------- formatting ---------- */
+const hm=ms=>{const d=new Date(ms),h=d.getHours();return (h%12||12)+':'+pad(d.getMinutes())+' '+(h<12?'am':'pm')};
+const dur=min=>{min=Math.round(min);return Math.floor(min/60)+'h '+pad(min%60)+'m'};
+const durS=min=>{min=Math.round(min);return min<60?min+' min':dur(min)};
+const day=ms=>new Date(ms).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+const tod=ms=>{const d=new Date(ms);return(d.getHours()*60+d.getMinutes()+720)%1440};
+const clock=x=>{x=Math.round(x);const c=((x+720)%1440+1440)%1440,h=Math.floor(c/60);return (h%12||12)+':'+pad(c%60)+' '+(h<12?'am':'pm')};
+const avgOf=(arr,f)=>arr.length?arr.reduce((s,x,i)=>s+f(x,i),0)/arr.length:0;
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,4200)}
+const MOODS={rested:'Rested',ok:'OK',tired:'Tired'};
+function face(m){const mouth={rested:'M8 14.5c1.2 1.6 2.4 2.3 4 2.3s2.8-.7 4-2.3',ok:'M8.5 15.5h7',tired:'M8 16.8c1.2-1.4 2.4-2 4-2s2.8.6 4 2'}[m];
+  return `<svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 10v.5M15 10v.5"/><path d="${mouth}"/></svg>`}
+const KIND_COLOR={Snoring:'--dawn',Talking:'--talk',Coughing:'--cough',Sound:'--mute'};
+function moon(ms){const p=(((ms-947182440000)/DAY)%29.530589+29.530589)%29.530589/29.530589;
+  return ['New moon','Waxing crescent','First quarter','Waxing gibbous','Full moon','Waning gibbous','Last quarter','Waning crescent'][Math.floor(p*8+.5)%8]}
+
+/* ---------- sleep analysis ---------- */
+function act(x,noMotion){if(x.g)return 1.2;return Math.min(10,noMotion?x.s*1.5:x.m*0.6+x.s*0.8)}
+const memo=new WeakMap();
+function analyze(n){let a=memo.get(n);if(!a){a=analyze0(n);memo.set(n,a)}return a}
+function analyze0(n){
+  const acts=n.mins.map(x=>act(x,n.noMotion)),N=acts.length;
+  const sm=acts.map((_,i)=>{let s=0,w=0;for(let k=-3;k<=3;k++){const j=i+k;if(j>=0&&j<N){const wt=4-Math.abs(k);s+=acts[j]*wt;w+=wt}}return s/w});
+  let onset=N;
+  for(let i=0;i+10<=N;i++){let ok=true;for(let j=i;j<i+10;j++)if(sm[j]>=2.2){ok=false;break}if(ok){onset=i;break}}
+  const after=sm.slice(onset).sort((a,b)=>a-b);
+  const deepTh=after.length?Math.min(1.6,Math.max(0.4,after[Math.floor(after.length*0.4)])):0;
+  const stages=sm.map((v,i)=>i<onset||v>=3.5?0:v>deepTh||i-onset<15?1:2);
+  // dream sleep: the calmest light-sleep stretches from about 70 minutes after falling asleep, at least 5 minutes long
+  const li=stages.map((s,i)=>s===1&&i-onset>=70?i:-1).filter(i=>i>=0),lv=li.map(i=>sm[i]).sort((a,b)=>a-b);
+  if(lv.length){const dTh=lv[Math.floor(lv.length*.45)];li.forEach(i=>{if(sm[i]<=dTh)stages[i]=3})}
+  for(let i=0;i<N;){if(stages[i]!==3){i++;continue}let j=i;while(j<N&&stages[j]===3)j++;if(j-i<5)for(let k=i;k<j;k++)stages[k]=1;i=j}
+  let asleep=0,deep=0,dream=0,awakeIn=0,awakenings=0,run=0;
+  stages.forEach((s,i)=>{if(s>0)asleep++;if(s===2)deep++;if(s===3)dream++;if(i>=onset&&s===0)awakeIn++;
+    if(i>=onset&&s===0)run++;else{if(run>=2)awakenings++;run=0}});
+  const depth=sm.map(v=>Math.max(0,Math.min(1,1-v/4.5)));
+  const snoreMin=n.mins.filter(x=>x.z).length;
+  const talks=n.mins.reduce((s,x)=>s+(x.t||0),0),coughs=n.mins.reduce((s,x)=>s+(x.c||0),0);
+  const deepFrac=deep/Math.max(1,asleep),awakeFrac=awakeIn/Math.max(1,N-onset);
+  const quality=asleep?Math.max(0,Math.round(100*(0.45*Math.min(1,asleep/480)+0.25*Math.min(1,deepFrac/0.3)+0.3*(1-Math.min(1,awakeFrac/0.12)))-2*awakenings)):0;
+  return {stages,depth,onset:Math.min(onset,N),asleep,deep,dream,light:asleep-deep-dream,awake:N-asleep,awakenings,snoreMin,talks,coughs,quality,inBed:N};
+}
+// how close this night's bed and wake times were to the week before it, 100 = same minute
+function regularity(n){
+  const prev=shownNights().filter(x=>x.start<n.start).slice(0,7);
+  if(prev.length<2)return null;
+  const db=avgOf(prev,x=>Math.abs(tod(x.start)-tod(n.start))),dw=avgOf(prev,x=>Math.abs(tod(x.end)-tod(n.end)));
+  return Math.max(0,Math.min(100,Math.round(100-(db+dw)/2*100/120)));
+}
+
+/* ---------- example nights (shown until there is a real one) ---------- */
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let examples=null;
+function getExamples(){
+  if(examples)return examples;
+  examples=[];
+  const odds={'Coffee':.35,'Alcohol':.2,'Workout':.3,'Late meal':.2,'Stressful day':.25,'Nap':.1,'Screens in bed':.35,'Reading':.25};
+  for(let k=0;k<30;k++){
+    const r=rng(9001+k*77);
+    const tags=DEFAULT_TAGS.filter(t=>r()<odds[t]),has=t=>tags.includes(t);
+    const mid=new Date();mid.setHours(0,0,0,0);mid.setDate(mid.getDate()-k);
+    let rest=0.8+r()*0.7;
+    if(has('Alcohol'))rest*=1.35;if(has('Workout'))rest*=.82;if(has('Stressful day'))rest*=1.2;if(has('Screens in bed'))rest*=1.08;if(has('Reading'))rest*=.94;
+    const start=mid.getTime()-Math.round(5+r()*80-(has('Screens in bed')?25:0))*60000;
+    const D=Math.round(400+r()*85),onset=8+Math.floor(r()*18)+(has('Coffee')?14:0)+(has('Screens in bed')?6:0);
+    const snores=r()<(has('Alcohol')?.9:.4);
+    const mins=[];
+    for(let i=0;i<D;i++){
+      let a,depth=0;
+      if(i<onset)a=3.5+r()*4;
+      else{const p=(i-onset)/92;depth=(0.5-0.5*Math.cos(p*2*Math.PI))*(1-0.45*i/D);a=((1-depth)*3.6*r()+(r()<0.04?7:0))*rest}
+      if(i>D-6)a+=2+r()*2;
+      const x={m:Math.round(a*0.9),s:Math.round(a*0.35)};
+      if(snores&&depth>0.55&&r()<0.35){x.z=1;x.n=Math.round(10+r()*8)}
+      else if(i>onset&&depth<.4&&r()<.007){x.t=1;x.s++;x.n=Math.round(9+r()*6)}
+      else if(r()<.004){x.c=1+Math.floor(r()*2);x.s++;x.n=Math.round(15+r()*8)}
+      else{const q=Math.round(r()*a*.8);if(q)x.n=q}
+      mins.push(x);
+    }
+    const end=start+D*60000,smart=r()<0.75;
+    const at=Math.ceil((end+(smart?3+r()*22:0)*60000)/300000)*300000;
+    const n={id:'ex'+k,example:true,start,end,mins,alarm:{at,win:30},wokeBy:smart?'smart':'end',wokeAt:end,clips:[],tags,note:'',snoozes:0};
+    const q=analyze(n).quality+(r()*14-7);
+    n.mood=q>=80?'rested':q>=64?'ok':'tired';
+    examples.push(n);
+  }
+  return examples;
+}
+function shownNights(){const real=S.nights.slice().sort((a,b)=>b.start-a.start);return real.length?real:getExamples()}
+const findNight=id=>shownNights().find(n=>n.id===id);
+function alarmAt(){
+  const [h,m]=S.settings.alarm.split(':').map(Number);const d=new Date();d.setHours(h,m,0,0);
+  if(d.getTime()<=Date.now()+60000)d.setDate(d.getDate()+1);return d.getTime();
+}
+function latency(){const real=S.nights.slice(-14);return real.length>=3?Math.round(avgOf(real,n=>analyze(n).onset)):15}
+function addTag(input,select){
+  const t=input.value.trim().replace(/\s+/g,' ');if(!t)return;
+  if(!S.settings.tags.some(x=>x.toLowerCase()===t.toLowerCase()))S.settings.tags.push(t);
+  if(select&&!S.settings.tonight.includes(t))S.settings.tonight.push(t);
+  input.value='';saveSettings();
+}
+const wokeText=n=>{
+  if(!n.alarm)return 'No alarm. You ended the night at '+hm(n.end)+'.';
+  const at=n.alarm.at,sn=n.snoozes?` You snoozed ${n.snoozes}×.`:'';
+  if(n.wokeBy==='smart')return `Woke you at ${hm(n.wokeAt)} in light sleep, ${Math.round((at-n.wokeAt)/60000)} min before ${hm(at)}.`+sn;
+  if(n.wokeBy==='end')return `Woke you at ${hm(at)}. You stayed in deeper sleep through the window.`+sn;
+  if(n.wokeBy==='snooze')return `Woke you at ${hm(n.wokeAt)}, then you snoozed.`+sn;
+  return 'You ended the night yourself at '+hm(n.end)+'.';
+};
+
+/* ================= look and shared pieces ================= */
+S.range='days';S.gmode='stages';S.hover=null;S.showAll=false;S.openSet=null;
+const IC={
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+  chev:'<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>',
+  stop:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  folder:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2h8A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14.5 2.5a9.5 9.5 0 1 0 7 15.8A10.5 10.5 0 0 1 14.5 2.5z"/></svg>',
+  alarm:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 4.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zm-1.2 12.3-3.4-3.3 1.4-1.4 2 2 4.6-4.6 1.4 1.4z"/><path d="M3 6.5 6.5 3l1.2 1.2-3.5 3.5zM21 6.5 17.5 3l-1.2 1.2 3.5 3.5z"/></svg>',
+  reg:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2" y="9" width="3" height="8" rx="1.5"/><rect x="7" y="5" width="3" height="12" rx="1.5"/><rect x="12" y="7" width="3" height="10" rx="1.5"/><rect x="17" y="6" width="3" height="11" rx="1.5"/></svg>',
+  sleepy:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM6.6 10.6l1-1.2c.9.7 2 .7 2.9 0l1 1.2a3.8 3.8 0 0 1-4.9 0zm6.9 0 1-1.2c.9.7 2 .7 2.9 0l1 1.2a3.8 3.8 0 0 1-4.9 0zM12 18a2.3 2.3 0 0 1-2.3-2.3h4.6A2.3 2.3 0 0 1 12 18z" fill-rule="evenodd"/></svg>',
+  zz:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11h6l-6 8h6M13 4h5l-5 6h5"/></svg>',
+  goal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>',
+  wave:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2" y="10.5" width="2" height="3" rx="1"/><rect x="5.5" y="7" width="2" height="10" rx="1"/><rect x="9" y="3.5" width="2" height="17" rx="1"/><rect x="12.5" y="6" width="2" height="12" rx="1"/><rect x="16" y="8.5" width="2" height="7" rx="1"/><rect x="19.5" y="10.5" width="2" height="3" rx="1"/></svg>',
+  note:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.3-9.2C1.3 8.3 3.6 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.7 1.1-1.6 2.7-2.7 4.7-2.7 3.7 0 6 3.8 4.6 7.3C19.5 16.4 12 21 12 21z"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.9 10.4 3.4 3.4-1.3 1.3-4-4V5.5h1.9z" fill-rule="evenodd"/></svg>',
+  music:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 17.5V6l11-2.5v11.2a2.8 2.8 0 1 1-1.6-2.5V7.5L10.6 9.3v8.4a2.8 2.8 0 1 1-1.6-.2z"/></svg>',
+  snooze:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M9.5 10.5h5l-5 5h5M4 4.5 6.5 2M20 4.5 17.5 2"/></svg>',
+  mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
+  move:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M3 9v6M21 9v6"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.4" fill="currentColor"/></svg>',
+  cloud:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 19a5 5 0 0 1-.7-10A6.5 6.5 0 0 1 18.8 10.3 4.4 4.4 0 0 1 18 19zm3.4-3.2 5.4-5.4-1.3-1.3-4.1 4.1-1.9-1.9-1.3 1.3z" fill-rule="evenodd"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'
+};
+const STG=[['Awake','--awake'],['Light','--light'],['Deep','--deep'],['Dream','--dream']];
+const fmtDur=min=>{min=Math.round(min);const h=Math.floor(min/60),m=min%60;return h?(m?`${h}h ${m}m`:`${h}h`):`${m} min`};
+const nightDate=n=>new Date(n.start-6*3600000);
+const dkey=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+const dm=d=>d.getDate()+'/'+(d.getMonth()+1);
+const longDay=n=>nightDate(n).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'});
+let gid=0;
+function ringInner(q,sw,track){const id='qg'+(++gid),r=50-sw/2,C=2*Math.PI*r;
+  return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${tok('--q2')}"/><stop offset="1" stop-color="${tok('--q1')}"/></linearGradient></defs><circle cx="50" cy="50" r="${r}" fill="none" stroke="${track||tok('--panel2')}" stroke-width="${sw}"/>${q>0?`<circle cx="50" cy="50" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${(C*Math.min(100,q)/100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>`:''}`}
+
+/* ---------- bottom sheet ---------- */
+let sheetFn=null;
+function openSheet(fn){sheetFn=fn;$('#scrim').hidden=false;drawSheet()}
+function drawSheet(){if(!sheetFn)return;const sh=$('#sheet'),y=sh.scrollTop;sh.innerHTML='<div class="grab"></div>'+sheetFn.html();sheetFn.bind&&sheetFn.bind(sh);sh.scrollTop=y;const d=sh.querySelector('[data-close]');if(d)d.onclick=closeSheet}
+function closeSheet(){const f=sheetFn;sheetFn=null;$('#scrim').hidden=true;if(f&&f.onClose)f.onClose()}
+$('#scrim').onclick=e=>{if(e.target.id==='scrim')closeSheet()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#scrim').hidden)closeSheet()});
+
+/* ---------- views ---------- */
+function show(v,keep){
+  S.view=v;
+  ['tonight','report','trends','more'].forEach(x=>$('#v-'+x).hidden=x!==v);
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===v?'page':'false'));
+  document.body.classList.toggle('sky',v==='tonight');$('#stars').hidden=v!=='tonight';
+  if(!keep)window.scrollTo(0,0);
+  if(v==='tonight')renderTonight();
+  if(v==='report')renderReport();
+  if(v==='trends')renderTrends();
+  if(v==='more')renderSettings();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+function openReport(id){S.reportId=id;S.hover=null;S.showAll=false;show('report')}
+
+function drawStars(){const c=$('#stars'),d=window.devicePixelRatio||1,W=innerWidth,H=innerHeight;c.width=W*d;c.height=H*d;const g=c.getContext('2d');g.scale(d,d);const r=rng(42);
+  for(let i=0;i<Math.round(W*H/4200);i++){const y=r()*H*.85;g.globalAlpha=(.2+r()*.7)*(1-y/H*.8);g.fillStyle='#fff';g.beginPath();g.arc(r()*W,y,r()<.07?1.5:.4+r()*.8,0,7);g.fill()}}
+addEventListener('resize',()=>{clearTimeout(drawStars.t);drawStars.t=setTimeout(()=>{drawStars();if(S.view==='report')drawNight();if(S.view==='trends')renderTrends()},200)});
+
+/* ================= Sleep (tonight) ================= */
+const H12=[1,2,3,4,5,6,7,8,9,10,11,12],M5=[0,5,10,15,20,25,30,35,40,45,50,55];
+function buildWheel(){
+  const col=(cls,items,id,lab)=>`<div class="col ${cls}" id="${id}" tabindex="0" aria-label="${lab}"><div class="pad"></div>${items.map(x=>`<div>${x}</div>`).join('')}<div class="pad"></div></div>`;
+  $('#wheel').innerHTML=col('',H12,'wH','Hour')+'<span class="colon">:</span>'+col('',M5.map(pad),'wM','Minutes')+col('ap',['AM','PM'],'wP','AM or PM');
+  ['wH','wM','wP'].forEach(id=>{const el=$('#'+id);
+    el.addEventListener('scroll',()=>{clearTimeout(el.t);el.t=setTimeout(readWheel,140)},{passive:true});
+    el.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();el.scrollBy({top:e.key==='ArrowUp'?-72:72,behavior:'smooth'})}})});
+}
+function setWheel(){const[h,m]=S.settings.alarm.split(':').map(Number);
+  $('#wH').scrollTop=((h%12||12)-1)*72;$('#wM').scrollTop=(Math.round(m/5)%12)*72;$('#wP').scrollTop=(h>=12?1:0)*72}
+function readWheel(){const i=id=>Math.max(0,Math.min(11,Math.round($('#'+id).scrollTop/72)));
+  let h=H12[i('wH')]%12;if(i('wP')>=1)h+=12;const v=pad(h)+':'+pad(M5[i('wM')]);
+  if(v!==S.settings.alarm){S.settings.alarm=v;saveSettings();renderOpts()}wakeLine()}
+function wakeLine(){const w=S.settings.win,at=alarmAt();
+  $('#wakeText').innerHTML=w<=0?`Rings at <b>${hm(at)}</b>`:`Wake up easy between<br><b>${hm(at-w*60000)} – ${hm(at)}</b>`}
+const pagesEl=$('#pages');
+pagesEl.addEventListener('scroll',()=>{clearTimeout(pagesEl.t);pagesEl.t=setTimeout(()=>setPage(Math.round(pagesEl.scrollLeft/Math.max(1,pagesEl.clientWidth)),false),120)},{passive:true});
+function setPage(p,scroll){const st=S.settings;
+  if(p===1&&st.win>=0){st.lastWin=st.win;st.win=-1;saveSettings();renderOpts()}
+  if(p===0&&st.win<0){st.win=st.lastWin>=0?st.lastWin:30;saveSettings();renderOpts()}
+  if(scroll)pagesEl.scrollLeft=p*pagesEl.clientWidth;
+  $('#dots').innerHTML=[0,1].map(i=>`<i class="${i===p?'on':''}"></i>`).join('');wakeLine()}
+function aidUi(){const st=S.settings;
+  $('#aidName').textContent=st.aid==='off'?'Sleep aid':`${AIDS[st.aid]} · ${st.aidMin} min`;
+  $('#aidPlay').innerHTML=aidSnd&&!S.T?IC.stop:IC.play;$('#aidPlay').hidden=st.aid==='off'}
+$('#aidPlay').onclick=()=>{if(aidSnd)stopAid();else if(S.settings.aid!=='off')previewAid();aidUi()};
+$('#aidPill').onclick=()=>openSheet({html:aidPicker,bind:bindAid,onClose:aidUi});
+function aidPicker(){const st=S.settings;
+  return `<h3>Sleep aid</h3><p class="hint">A calm sound to fall asleep to. It fades out, then listening starts.</p>
+  <div class="chips">${[['off','Off'],...Object.entries(AIDS)].map(([k,v])=>`<button class="chip" data-aid="${k}" aria-pressed="${st.aid===k}">${v}</button>`).join('')}</div>
+  ${st.aid==='off'?'':`<div class="eyebrow">Fade out after</div><div class="chips">${[15,30,45,60].map(m=>`<button class="chip" data-am="${m}" aria-pressed="${st.aidMin===m}">${m} min</button>`).join('')}</div>
+  <button class="ghost small" id="aidPrev" style="align-self:flex-start">${aidSnd&&!S.T?'Stop preview':'Preview sound'}</button>`}
+  <button class="ghost" data-close>Done</button>`}
+function bindAid(sh){const st=S.settings;
+  sh.querySelectorAll('[data-aid]').forEach(b=>b.onclick=()=>{st.aid=b.dataset.aid;saveSettings();if(aidSnd&&!S.T){stopAid();if(st.aid!=='off')previewAid()}drawSheet();aidUi()});
+  sh.querySelectorAll('[data-am]').forEach(b=>b.onclick=()=>{st.aidMin=+b.dataset.am;saveSettings();drawSheet();aidUi()});
+  const p=sh.querySelector('#aidPrev');if(p)p.onclick=()=>{if(aidSnd)stopAid();else previewAid();drawSheet();aidUi()}}
+function previewAid(){startAid(S.settings.aid,0);aidSnd.t=setTimeout(()=>{stopAid();aidUi();if(sheetFn)drawSheet()},20000)}
+
+function goalStepper(){return `<div class="stepper"><button data-goal="-15" aria-label="Fifteen minutes less">−</button><span class="v">${fmtDur(S.settings.goal)}</span><button data-goal="15" aria-label="Fifteen minutes more">+</button></div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-goal]');if(!b)return;
+  S.settings.goal=Math.max(300,Math.min(660,S.settings.goal+ +b.dataset.goal));saveSettings();
+  if(S.view==='tonight')renderOpts();else if(S.view==='more')renderSettings()});
+const WINS=[[0,'Exact time'],[15,'15 min'],[30,'30 min'],[45,'45 min']];
+
+function renderTonight(){
+  if(!$('#wH'))buildWheel();
+  const p=S.settings.win<0?1:0;
+  requestAnimationFrame(()=>{setWheel();pagesEl.scrollLeft=p*pagesEl.clientWidth});
+  setPage(p,false);aidUi();renderOpts();
+}
+function renderOpts(){
+  const st=S.settings,w=st.win,at=alarmAt(),lat=latency();
+  const tags=st.tags.concat(st.tonight.filter(t=>!st.tags.includes(t)));
+  const n=shownNights()[0];
+  $('#tonightOpts').innerHTML=`
+  <h2>Tonight</h2>
+  ${w>=0?`<div class="card skycard"><h3>Wake-up phase</h3>
+    <div class="chips" id="winChips">${WINS.map(([v,l])=>`<button class="chip" data-w="${v}" aria-pressed="${w===v}">${l}</button>`).join('')}</div>
+    <p class="hint">${w===0?'Rings exactly at '+hm(at)+'.':`From ${hm(at-w*60000)}, it rings as soon as you're in light sleep. If you stay deeply asleep, it rings at ${hm(at)}.`}</p></div>`:''}
+  <div class="card skycard"><div class="row"><h3>Sleep goal</h3>${goalStepper()}</div>
+    <p class="hint" style="color:var(--ink)">${w<0?'Swipe back to the alarm to see when to go to bed.':`Get in bed by ${hm(at-(st.goal+lat)*60000)} to sleep ${fmtDur(st.goal)} before ${hm(at)}. That allows ${lat} min to fall asleep.`}</p></div>
+  <div class="card skycard"><div><h3>Sleep notes</h3><p class="hint">Tag what happened today. Statistics shows what helps your sleep and what hurts it.</p></div>
+    <div class="chips" id="tonightTags">${tags.map(t=>`<button class="chip" data-tag="${esc(t)}" aria-pressed="${st.tonight.includes(t)}">${esc(t)}</button>`).join('')}<button class="chip add" id="tagNew">+ New note</button></div>
+    <div class="addrow" id="tagAdd" hidden><input id="newTag" maxlength="24" placeholder="New note, like Tea or Sauna"><button class="ghost small" id="tagAddBtn">Add</button></div></div>
+  <div class="card skycard" style="gap:18px">
+    <label class="tog"><span>Record snoring, talking and coughing</span><input type="checkbox" id="optSnore" ${st.snore?'checked':''}></label>
+    <label class="tog"><span>Feel movement (phone on the mattress)</span><input type="checkbox" id="optMotion" ${st.motion?'checked':''}></label></div>
+  <ol class="steps"><li>Plug the phone into its charger.</li><li>Put it on the mattress near your pillow, screen down.</li><li>Leave Ninna Nanna open. The screen stays on but goes almost black.</li></ol>
+  ${n?`<button class="link skycard" id="lastNight"><svg class="minir" viewBox="0 0 100 100" aria-hidden="true">${ringInner(analyze(n).quality,10,'rgba(255,255,255,.12)')}</svg><span class="grow"><span class="hint">${n.example?'Example night':'Last night'}</span><br>${longDay(n)}</span><span class="val">${analyze(n).quality}%</span>${IC.chev}</button>`:''}`;
+  const o=$('#tonightOpts');
+  o.querySelectorAll('#winChips .chip').forEach(c=>c.onclick=()=>{st.win=+c.dataset.w;saveSettings();renderOpts();wakeLine()});
+  o.querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{const t=b.dataset.tag,i=st.tonight.indexOf(t);if(i<0)st.tonight.push(t);else st.tonight.splice(i,1);saveSettings();b.setAttribute('aria-pressed',String(i<0))});
+  $('#tagNew').onclick=()=>{$('#tagAdd').hidden=false;$('#newTag').focus()};
+  $('#tagAddBtn').onclick=()=>{addTag($('#newTag'),true);renderOpts()};
+  $('#newTag').onkeydown=e=>{if(e.key==='Enter')$('#tagAddBtn').click()};
+  $('#optSnore').onchange=e=>{st.snore=e.target.checked;saveSettings()};
+  $('#optMotion').onchange=e=>{st.motion=e.target.checked;saveSettings()};
+  if(n)$('#lastNight').onclick=()=>openReport(n.id);
+  $('#testSound').textContent=alarmSnd?'Stop the alarm sound':'Play the alarm sound ('+MELODIES[st.sound].name+')';
+}
+$('#toOpts').onclick=e=>{e.preventDefault();$('#tonightOpts').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})};
+
+/* ================= Journal ================= */
+function weekStrip(n){
+  const all=shownNights(),byDay={};all.forEach(x=>{const k=dkey(nightDate(x));if(!byDay[k])byDay[k]=x});
+  const nd=nightDate(n),mon=new Date(nd);mon.setHours(12,0,0,0);mon.setDate(mon.getDate()-((nd.getDay()+6)%7));
+  let h='';
+  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);const k=dkey(d),x=k===dkey(nd)?n:byDay[k],sel=x===n;
+    const q=x?analyze(x).quality:0;
+    h+=`<button class="dayr ${x?'has':''} ${sel?'sel':''}" ${x?`data-id="${x.id}"`:'disabled'} aria-label="${d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'})}${x?', quality '+q+'%':', no night'}"><svg viewBox="0 0 100 100" style="opacity:${sel?1:x?.5:1}">${ringInner(q,8,sel?'rgba(255,255,255,.18)':'#1b1b1e')}</svg>${'MTWTFSS'[i]}</button>`}
+  return h+`<button class="round" id="allNights" aria-label="All nights">${IC.folder}</button>`;
+}
+function renderReport(keep){
+  const el=$('#v-report'),list=shownNights();
+  const n=findNight(S.reportId)||list[0];
+  if(!n){el.innerHTML='<p class="hint">No nights yet.</p>';return}
+  S.reportId=n.id;
+  const a=analyze(n),nd=nightDate(n),ed=new Date(n.end),reg=regularity(n),goal=n.goal||S.settings.goal;
+  const same=nd.getMonth()===ed.getMonth();
+  const range=same?`${nd.getDate()}–${ed.getDate()} ${ed.toLocaleDateString(undefined,{month:'short'})}`:`${nd.getDate()} ${nd.toLocaleDateString(undefined,{month:'short'})} – ${ed.getDate()} ${ed.toLocaleDateString(undefined,{month:'short'})}`;
+  const clips=n.clips||[],order=['Snoring','Talking','Coughing','Sound'];
+  const tags=n.tags||[];
+  const fact=(icon,val,lab)=>`<div class="fact">${icon}<div style="min-width:0"><span class="num">${val}</span><span class="lab">${lab}</span></div></div>`;
+  const lv=avgOf(n.mins,x=>x.n||0),level=lv<1.5?0:lv<4?1:2,loud=n.mins.reduce((b,x,i)=>(x.n||0)>(n.mins[b].n||0)?i:b,0);
+  let shown=0;const LIM=3;
+  const kindsHtml=order.filter(k=>clips.some(c=>c.kind===k)).map(k=>{const cs=clips.filter(c=>c.kind===k);
+    const vis=S.showAll?cs:cs.slice(0,LIM);shown+=vis.length;
+    return `<div class="kind"><h4>${k==='Sound'?'Other sounds':k}</h4>${vis.map(c=>`<div class="clip"><span class="t">${hm(c.t)}</span><div class="cliprow"><button class="play" data-clip="${c.id}" aria-label="Play ${k.toLowerCase()} clip from ${hm(c.t)}">${IC.play}</button>${waveHtml(n,c)}</div></div>`).join('')}</div>`}).join('');
+  el.innerHTML=`
+  <div class="jhead"><h1>${nd.toLocaleDateString(undefined,{weekday:'long'})}<small>${range}</small></h1><button class="round" id="calBtn" aria-label="Pick a night">${IC.cal}</button></div>
+  <div class="week">${weekStrip(n)}</div>
+  ${n.example?'<p class="msg">This is an example night, made up to show what your mornings will look like. Your own nights replace these after the first one.</p>':''}
+  <div class="hero">
+    <div class="ringq"><svg viewBox="0 0 100 100" style="filter:drop-shadow(0 0 12px rgba(242,103,30,.25))">${ringInner(a.quality,8)}</svg><span><b>${a.quality}<small>%</small></b><em>Quality</em></span></div>
+    <div class="big2"><div><span class="num">${fmtDur(a.inBed)}</span><div class="hint">In bed</div></div><div><span class="num">${fmtDur(a.asleep)}</span><div class="hint">Time asleep</div></div></div>
+  </div>
+  <hr class="rule">
+  <div class="seg">
+    <button data-g="stages" aria-pressed="${S.gmode==='stages'}">${IC.moon}Sleep stages</button>
+    <button data-g="sound" aria-pressed="${S.gmode==='sound'}" aria-label="Sounds through the night">${IC.wave}${clips.length?`<span class="badge">${clips.length}</span>`:''}</button>
+    <button id="noteBtn2" aria-label="Sleep notes" style="width:48px;padding:0;justify-content:center">${n.mood?face(n.mood):IC.note}</button>
+  </div>
+  <div class="graphwrap"><div class="tip" id="tip" hidden></div><canvas class="graph" id="graph" height="250" role="img" aria-label="${S.gmode==='stages'?'Sleep stages through the night':'Sounds through the night'}"></canvas></div>
+  ${S.gmode==='stages'?`<div class="legend4">
+    <span><i style="background:var(--awake)"></i>Awake <b>${fmtDur(a.awake)}</b></span><span><i style="background:var(--dream)"></i>Dream <b>${fmtDur(a.dream)}</b></span>
+    <span><i style="background:var(--light)"></i>Light <b>${fmtDur(a.light)}</b></span><span><i style="background:var(--deep)"></i>Deep <b>${fmtDur(a.deep)}</b></span></div>`
+  :`<div class="legend4">
+    <span><i style="background:var(--dawn)"></i>Snoring <b>${fmtDur(a.snoreMin)}</b></span><span><i style="background:var(--talk)"></i>Talking <b>${a.talks}×</b></span>
+    <span><i style="background:var(--cough)"></i>Coughing <b>${a.coughs}×</b></span><span><i style="background:var(--dim)"></i>Room sound</span></div>`}
+  <hr class="rule">
+  <div class="facts">
+    ${fact(IC.reg,reg==null?'–':reg+'%','Regularity')}
+    ${fact(IC.sleepy,durS(a.onset),'Asleep after')}
+    ${fact(IC.moon,hm(n.start),'Went to bed')}
+    ${fact(IC.alarm,hm(n.end),'Woke up')}
+    ${fact(IC.zz,durS(a.snoreMin),'Snoring')}
+    ${fact(IC.goal,Math.round(100*a.asleep/goal)+'%','Goal of '+fmtDur(goal))}
+  </div>
+  <p class="hint">${wokeText(n)}${a.awakenings?` You woke up ${a.awakenings}× in the night.`:''}${n.aid?` Fell asleep to ${AIDS[n.aid.kind]||'a sleep aid'} for ${n.aid.min} min.`:''}</p>
+  ${n.mood||tags.length||n.note?`<div class="notesum">${n.mood?`<span class="tagpill" style="display:inline-flex;align-items:center;gap:6px">${face(n.mood)}${MOODS[n.mood]}</span>`:''}${tags.map(t=>`<span class="tagpill">${esc(t)}</span>`).join('')}</div>${n.note?`<p class="hint" style="color:var(--ink)">${esc(n.note)}</p>`:''}`:''}
+  <button class="outline" id="noteBtn">${n.mood||tags.length||n.note?'Edit sleep notes':'Add sleep notes'}</button>
+  <hr class="rule">
+  <div class="card">
+    <div class="cardhead"><h3>Room sound</h3>${IC.wave}</div>
+    <div class="bigstat"><div><span class="num">${['Quiet','Medium','Loud'][level]}</span><div class="hint">${(n.mins[loud]&&n.mins[loud].n)?'Loudest at '+hm(n.start+loud*60000):'No loud moments'}</div></div>
+      <div class="lvl"><b style="color:${['var(--light)','var(--dawn)','var(--cough)'][level]}">${['Calm','Some noise','Noisy'][level]}</b><div class="meter3">${[0,1,2].map(i=>`<i style="${i===level?`background:${['var(--light)','var(--dawn)','var(--cough)'][level]}`:''}"></i>`).join('')}</div></div></div>
+    <canvas class="graph" id="noiseG" height="120" role="img" aria-label="How loud the room was through the night"></canvas>
+  </div>
+  ${clips.length?kindsHtml+(shown<clips.length||S.showAll?`<button class="outline" id="showAll">${S.showAll?'Show fewer':`Show all (${clips.length})`}</button>`:'')
+    :`<p class="hint">${n.example?'Sound clips you can play back show up here after a real night.':'No sound clips this night.'}</p>`}
+  <p class="hint">Sound clips stay on this phone only.</p>
+  ${n.example?'':'<button class="ghost" id="delBtn" style="color:var(--cough)">Delete this night</button>'}`;
+  el.querySelectorAll('.dayr[data-id]').forEach(b=>b.onclick=()=>openReport(b.dataset.id));
+  $('#allNights').onclick=nightsSheet;$('#calBtn').onclick=nightsSheet;
+  el.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{S.gmode=b.dataset.g;S.hover=null;const y=window.scrollY;renderReport();window.scrollTo(0,y)});
+  $('#noteBtn').onclick=()=>notesSheet(n);$('#noteBtn2').onclick=()=>notesSheet(n);
+  el.querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>playClip(b));
+  const sa=$('#showAll');if(sa)sa.onclick=()=>{S.showAll=!S.showAll;const y=window.scrollY;renderReport();window.scrollTo(0,y)};
+  if(S.hover==null&&S.gmode==='stages'){const i=a.stages.indexOf(3);S.hover=i>=0?i:null}
+  requestAnimationFrame(()=>{drawNight();drawNoise(n)});
+  const cv=$('#graph');
+  const pick=e=>{const r=cv.getBoundingClientRect(),N=a.depth.length;S.hover=Math.max(0,Math.min(N-1,Math.round((e.clientX-r.left-4)/(r.width-8)*(N-1))));drawNight()};
+  cv.onpointerdown=e=>{pick(e);cv.setPointerCapture&&cv.setPointerCapture(e.pointerId)};
+  cv.onpointermove=e=>{if(e.buttons||e.pointerType==='mouse')pick(e)};
+  const del=$('#delBtn');if(del)del.onclick=()=>{
+    if(!del.dataset.sure){del.dataset.sure=1;del.textContent='Tap again to delete for good';setTimeout(()=>{if(del.isConnected){delete del.dataset.sure;del.textContent='Delete this night'}},4000);return}
+    (n.clips||[]).forEach(c=>clipOp('del',c.id).catch(()=>{}));
+    S.nights=S.nights.filter(x=>x.id!==n.id);saveNights();toast('Night deleted.');S.reportId=null;show('report')};
+}
+function nightsSheet(){openSheet({html:()=>`<div class="row"><h3>All nights</h3><button class="ghost small" data-close>Done</button></div>${S.nights.length?'':'<p class="hint">Example nights until you track your own.</p>'}
+  <div class="nlist">${shownNights().map(n=>{const a=analyze(n);return `<button class="nrow" data-id="${n.id}"><svg class="minir" viewBox="0 0 100 100" aria-hidden="true">${ringInner(a.quality,10)}</svg><span class="grow"><b style="font-weight:600">${longDay(n)}</b><br><span class="hint">${hm(n.start)} – ${hm(n.end)} · ${fmtDur(a.asleep)} asleep${a.snoreMin?' · snored '+durS(a.snoreMin):''}</span></span><span class="q">${a.quality}%</span></button>`}).join('')}</div>`,
+  bind:sh=>sh.querySelectorAll('.nrow').forEach(b=>b.onclick=()=>{closeSheet();openReport(b.dataset.id)})})}
+function notesSheet(n){
+  openSheet({html:()=>{const tags=n.tags||[],tl=S.settings.tags.concat(tags.filter(t=>!S.settings.tags.includes(t))),dis=n.example?'disabled':'';
+    return `<div class="row"><h3>Sleep notes</h3><button class="ghost small" data-close>Done</button></div>
+    ${n.example?'<p class="hint">Example nights can\'t be edited. Your own nights can.</p>':''}
+    <div class="eyebrow">How did you wake up?</div>
+    <div class="chips moods">${Object.keys(MOODS).map(m=>`<button class="chip" data-m="${m}" aria-pressed="${n.mood===m}" ${dis}>${face(m)}${MOODS[m]}</button>`).join('')}</div>
+    <div class="eyebrow">What happened that day</div>
+    <div class="chips">${tl.map(t=>`<button class="chip" data-tag="${esc(t)}" aria-pressed="${tags.includes(t)}" ${dis}>${esc(t)}</button>`).join('')}</div>
+    ${n.example?'':'<div class="addrow"><input id="nNewTag" maxlength="24" placeholder="New note, like Tea or Sauna"><button class="ghost small" id="nTagAdd">Add</button></div>'}
+    <label for="noteBox" class="eyebrow">Notes</label>
+    <textarea id="noteBox" placeholder="Anything else about the night" ${dis}>${esc(n.note||'')}</textarea>`},
+  bind:sh=>{if(n.example)return;
+    sh.querySelectorAll('[data-m]').forEach(c=>c.onclick=()=>{n.mood=n.mood===c.dataset.m?null:c.dataset.m;saveNights();drawSheet()});
+    sh.querySelectorAll('[data-tag]').forEach(c=>c.onclick=()=>{const t=c.dataset.tag;n.tags=n.tags||[];const i=n.tags.indexOf(t);if(i<0)n.tags.push(t);else n.tags.splice(i,1);saveNights();c.setAttribute('aria-pressed',String(i<0))});
+    const add=sh.querySelector('#nTagAdd');add.onclick=()=>{const inp=sh.querySelector('#nNewTag'),t=inp.value.trim().replace(/\s+/g,' ');if(!t)return;addTag(inp,false);n.tags=n.tags||[];if(!n.tags.includes(t))n.tags.push(t);saveNights();drawSheet()};
+    sh.querySelector('#nNewTag').onkeydown=e=>{if(e.key==='Enter')add.click()};
+    sh.querySelector('#noteBox').oninput=e=>{n.note=e.target.value;clearTimeout(notesSheet.t);notesSheet.t=setTimeout(saveNights,400)}},
+  onClose:()=>{saveNights();if(S.view==='report'){const y=window.scrollY;renderReport();window.scrollTo(0,y)}}});
+}
+function waveHtml(n,c){
+  const k=Math.round((c.t-n.start)/60000),r=rng(Math.round(c.t/1000)),NB=40,col=`var(${KIND_COLOR[c.kind]||'--mute'})`;let b='';
+  for(let j=0;j<NB;j++){const x=n.mins[k-20+j]||{},lv=Math.min(1,(x.n||0)/20),inn=j>=17&&j<=23;
+    const h=Math.round(Math.min(100,(inn?.45:.12)*100+lv*45+r()*(inn?45:22)));
+    b+=`<span style="height:${Math.max(6,h)}%${inn?';opacity:1;background:'+col:''}"></span>`}
+  return `<div class="wave" aria-hidden="true"><i class="hl" style="left:41%;width:18%;background:${col}"></i>${b}</div>`;
+}
+let playing=null;
+async function playClip(btn){
+  if(playing){playing.a.pause();playing.b.innerHTML=IC.play;const same=playing.b===btn;playing=null;if(same)return}
+  try{const blob=await clipOp('get',btn.dataset.clip);if(!blob){toast("That clip isn't on this phone any more.");return}
+    const a=new Audio(URL.createObjectURL(blob));playing={a,b:btn};btn.innerHTML=IC.stop;a.onended=()=>{btn.innerHTML=IC.play;playing=null};await a.play();
+  }catch(e){toast("This clip couldn't be played.")}
+}
+function xLabels(g,n,N,X,y,W){
+  g.fillStyle=tok('--mute');g.textBaseline='alphabetic';g.font='500 14px '+tok('--fb');
+  const sL=hm(n.start),eL=hm(n.start+(N-1)*60000);
+  g.textAlign='left';g.fillText(sL,0,y);const sw=g.measureText(sL).width;
+  g.textAlign='right';g.fillText(eL,W,y);const ew=g.measureText(eL).width;
+  const first=new Date(n.start);first.setMinutes(0,0,0);const hrs=[];
+  for(let t=first.getTime()+3600000;t<n.start+N*60000;t+=3600000)hrs.push(t);
+  const step=hrs.length>7?2:1;g.textAlign='center';
+  hrs.forEach(t=>{const d=new Date(t);if(d.getHours()%step)return;const x=X((t-n.start)/60000);if(x<sw+22||x>W-ew-22)return;g.fillText(String(d.getHours()%12||12),x,y)});
+}
+function drawNight(){
+  const cv=$('#graph');if(!cv)return;const n=findNight(S.reportId);if(!n)return;const a=analyze(n);
+  const dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=250;cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';
+  const g=cv.getContext('2d');g.scale(dpr,dpr);
+  const L=4,R=4,T=56,B=40,w=W-L-R,h=H-T-B,N=a.depth.length,X=i=>L+(N<2?0:i/(N-1))*w;
+  if(S.gmode==='stages'){
+    const Y=d=>T+d*h;
+    // dream phases: a soft violet column with a bar along the bottom
+    const runs=[];let s=-1;a.stages.forEach((v,i)=>{if(v===3&&s<0)s=i;if(v!==3&&s>=0){runs.push([s,i-1]);s=-1}});if(s>=0)runs.push([s,N-1]);
+    const dc=tok('--dream');
+    runs.forEach(([s,e])=>{const gr=g.createLinearGradient(0,T,0,T+h);gr.addColorStop(0,'rgba(201,95,224,.34)');gr.addColorStop(1,'rgba(201,95,224,.06)');
+      g.fillStyle=gr;g.fillRect(X(s),T-6,Math.max(2,X(e)-X(s)),h+6);g.fillStyle=dc;g.fillRect(X(s),T+h+4,Math.max(2,X(e)-X(s)),3)});
+    // smooth the minute-by-minute depth into a calm wave, keeping dream stretches near the top like light sleep
+    const K=Math.max(4,Math.round(N/45)),base=a.depth.map((d,i)=>a.stages[i]===3?Math.min(d,.3):a.stages[i]===0?Math.min(d,.05):d);
+    const sd=base.map((_,i)=>{let s=0,w=0;for(let k=-K;k<=K;k++){const j=i+k;if(j>=0&&j<N){const wt=Math.exp(-(k*k)/(2*(K/2)*(K/2)));s+=base[j]*wt;w+=wt}}return s/w});
+    const step=Math.max(1,Math.floor(N/70)),pts=[];
+    for(let i=0;i<N;i+=step)pts.push([X(i),Y(sd[i])]);
+    pts.unshift([X(0),Y(sd[0])]);pts.push([X(N-1),Y(sd[N-1])]);
+    const path=()=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length-1;i++){const mx=(pts[i][0]+pts[i+1][0])/2,my=(pts[i][1]+pts[i+1][1])/2;g.quadraticCurveTo(pts[i][0],pts[i][1],mx,my)}g.lineTo(pts[pts.length-1][0],pts[pts.length-1][1])};
+    const lg=g.createLinearGradient(0,T,0,T+h);lg.addColorStop(0,'#e6edf6');lg.addColorStop(.45,tok('--light'));lg.addColorStop(1,tok('--deep'));
+    path();g.strokeStyle=lg;g.lineWidth=3;g.lineJoin='round';g.lineCap='round';g.stroke();
+    if(runs.length){g.save();g.beginPath();runs.forEach(([s,e])=>g.rect(X(s)-1,0,X(e)-X(s)+2,H));g.clip();path();g.strokeStyle=dc;g.shadowColor=dc;g.shadowBlur=14;g.lineWidth=3;g.stroke();g.restore()}
+  }else{
+    const bw=Math.max(1.5,w/N*.8),c=tok('--dim');
+    g.strokeStyle=tok('--line');g.beginPath();g.moveTo(L,T+h);g.lineTo(L+w,T+h);g.stroke();
+    n.mins.forEach((x,i)=>{const lv=Math.min(1,(x.n||0)/22),kind=x.z?'--dawn':x.t?'--talk':x.c?'--cough':null;if(!lv&&!kind)return;
+      const hh=Math.max(kind?14:2,lv*h);g.fillStyle=kind?tok(kind):c;g.fillRect(X(i)-bw/2,T+h-hh,bw,hh)});
+  }
+  xLabels(g,n,N,X,H-6,W);
+  const tip=$('#tip');
+  if(S.hover==null){tip.hidden=true;return}
+  const i=Math.min(N-1,S.hover),x=X(i);
+  g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=1.5;g.beginPath();g.moveTo(x,T-14);g.lineTo(x,T+h+8);g.stroke();
+  let lab,col;
+  if(S.gmode==='stages'){const st=a.stages[i];lab=STG[st][0];col=tok(STG[st][1])}
+  else{const m=n.mins[i]||{};lab=m.z?'Snoring':m.t?'Talking':m.c?'Coughing':(m.n||0)>4?'Room sound':'Quiet';col=tok(m.z?'--dawn':m.t?'--talk':m.c?'--cough':'--dim')}
+  tip.hidden=false;tip.innerHTML=`<i style="background:${col}"></i>${lab} <b>${hm(n.start+i*60000)}</b>`;
+  const tw=tip.offsetWidth;tip.style.left=Math.max(tw/2,Math.min(W-tw/2,x))+'px';
+}
+function drawNoise(n){
+  const cv=$('#noiseG');if(!cv)return;const dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=120;cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';
+  const g=cv.getContext('2d');g.scale(dpr,dpr);const N=n.mins.length,T=6,B=30,h=H-T-B,X=i=>(N<2?0:i/(N-1))*W,bw=Math.max(1.2,W/N*.7);
+  const gr=g.createLinearGradient(0,T,0,T+h);gr.addColorStop(0,tok('--cough'));gr.addColorStop(.5,tok('--dawn'));gr.addColorStop(1,'rgba(242,169,107,.5)');
+  g.strokeStyle='rgba(255,255,255,.8)';g.lineWidth=1.5;g.beginPath();g.moveTo(0,T+h+.5);g.lineTo(W,T+h+.5);g.stroke();
+  g.fillStyle=gr;n.mins.forEach((x,i)=>{const lv=Math.min(1,(x.n||0)/22);if(lv<.02)return;g.fillRect(X(i)-bw/2,T+h-lv*h,bw,lv*h)});
+  xLabels(g,n,N,X,H-4,W);
+}
+
+/* ================= Statistics ================= */
+function groups(){
+  const all=shownNights().slice().reverse(),wdn=n=>nightDate(n).toLocaleDateString(undefined,{weekday:'short'});
+  if(S.range==='days')return all.slice(-7).map(n=>({l1:wdn(n),l2:dm(nightDate(n)),ns:[n],id:n.id}));
+  if(S.range==='all')return all.slice(-120).map(n=>({l1:dm(nightDate(n)),ns:[n],id:n.id}));
+  const map=new Map();
+  all.forEach(n=>{const d=nightDate(n);let k,l1,l2;
+    if(S.range==='weeks'){const m=new Date(d);m.setDate(d.getDate()-((d.getDay()+6)%7));k=dkey(m);l1='Wk of';l2=dm(m)}
+    else{k=d.getFullYear()+'-'+d.getMonth();l1=d.toLocaleDateString(undefined,{month:'short'});l2=String(d.getFullYear())}
+    if(!map.has(k))map.set(k,{l1,l2,ns:[]});map.get(k).ns.push(n)});
+  return [...map.values()].slice(S.range==='weeks'?-8:-6);
+}
+const gval=(gr,fn)=>{const v=gr.ns.map(fn).filter(x=>x!=null&&isFinite(x));return v.length?v.reduce((s,x)=>s+x,0)/v.length:null};
+const GRADS={q:['--q1','--q2'],w:['--awake','--ink'],amber:['--q1','--dawn'],coral:['--cough','--q2'],blue:['--deep','--light'],dream:['--deep','--dream']};
+function niceStep(raw){const p=Math.pow(10,Math.floor(Math.log10(raw||1))),f=raw/p;return(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
+function chart(type,gs,fn,o){
+  o=o||{};
+  const W=Math.max(280,$('#v-trends').clientWidth),H=o.h||220,N=gs.length,two=N<=8&&gs[0].l2;
+  const L=58,R=10,T=14,B=two?54:32,w=W-L-R,h=H-T-B,cx=i=>L+w*(i+.5)/N;
+  let vals,v2,lo,hi,step;
+  if(type==='range'){vals=gs.map(x=>gval(x,n=>tod(n.start)));v2=gs.map(x=>gval(x,n=>tod(n.end)))}
+  else vals=gs.map(x=>gval(x,fn));
+  const all=vals.concat(v2||[]).filter(v=>v!=null);
+  if(!all.length)return '<p class="hint">Nothing to show yet.</p>';
+  if(o.time){lo=Math.floor((Math.min(...all)-20)/60)*60;hi=Math.ceil((Math.max(...all)+20)/60)*60;step=Math.max(60,Math.ceil((hi-lo)/4/60)*60);hi=lo+4*step}
+  else if(o.max){lo=0;hi=o.max;step=hi/4}
+  else{lo=0;const m=Math.max(...all)*1.08||1;step=o.hours?Math.max(60,Math.ceil(m/4/60)*60):niceStep(m/4);hi=step*4}
+  const Y=v=>o.invert?T+(v-lo)/(hi-lo)*h:T+h-(v-lo)/(hi-lo)*h;
+  const id='g'+(++gid),gc=GRADS[o.color||'w'];
+  let s=`<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(o.label||'')}"><defs><linearGradient id="${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${tok(gc[0])}"/><stop offset="1" stop-color="${tok(gc[1])}"/></linearGradient><filter id="${id}b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter></defs>`;
+  for(let k=0;k<=4;k++){const v=lo+k*step,y=Y(v);s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${tok('--line')}" stroke-width="1"/><text x="${L-10}" y="${y+5}" text-anchor="end" font-size="14">${o.fmt(v)}</text>`}
+  const mean=arr=>{const a=arr.filter(v=>v!=null);return a.length?a.reduce((x,y)=>x+y,0)/a.length:null};
+  const dash=v=>v==null?'':`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${tok('--ink')}" stroke-width="1.5" stroke-dasharray="7 6" opacity=".75"/>`;
+  const bw=Math.max(4,Math.min(30,w/N*.5));
+  const wrap=(i,inner)=>gs[i].id?`<g data-id="${gs[i].id}" style="cursor:pointer">${inner}</g>`:inner;
+  if(type==='bar'){
+    if(o.glow)vals.forEach((v,i)=>{if(v==null||v<=lo)return;const y=Y(v);s+=`<rect x="${cx(i)-bw/2}" y="${y}" width="${bw}" height="${Y(lo)-y}" rx="${Math.min(bw/2,(Y(lo)-y)/2)}" fill="${tok('--q1')}" opacity=".45" filter="url(#${id}b)"/>`});
+    vals.forEach((v,i)=>{if(v==null)return;const y=Y(Math.max(v,lo+step*.04)),bh=Y(lo)-y;s+=wrap(i,`<rect x="${cx(i)-bw/2}" y="${y}" width="${bw}" height="${bh}" rx="${Math.min(bw/2,bh/2)}" fill="url(#${id})"><title>${esc(gs[i].l1+' '+(gs[i].l2||''))}: ${o.fmt(v,true)}</title></rect>`)});
+    s+=dash(mean(vals));
+  }else if(type==='line'){
+    s+=dash(mean(vals));
+    const p=vals.map((v,i)=>v==null?null:[cx(i),Y(v)]).filter(Boolean);
+    if(p.length>1){let d=`M${p[0][0]},${p[0][1]}`;for(let i=0;i<p.length-1;i++){const a0=p[i-1]||p[i],a1=p[i],a2=p[i+1],a3=p[i+2]||a2;
+      d+=` C${a1[0]+(a2[0]-a0[0])/6},${a1[1]+(a2[1]-a0[1])/6} ${a2[0]-(a3[0]-a1[0])/6},${a2[1]-(a3[1]-a1[1])/6} ${a2[0]},${a2[1]}`}
+      s+=`<path d="${d}" fill="none" stroke="${tok('--mute')}" stroke-width="3" opacity=".8"/>`}
+    const r=N>20?4:N>10?5.5:8;
+    vals.forEach((v,i)=>{if(v==null)return;s+=wrap(i,`<circle cx="${cx(i)}" cy="${Y(v)}" r="${r}" fill="${tok('--dot')}"><title>${esc(gs[i].l1+' '+(gs[i].l2||''))}: ${o.fmt(v,true)}</title></circle>`)});
+  }else{
+    s+=dash(mean(vals))+dash(mean(v2));
+    vals.forEach((v,i)=>{if(v==null)return;const y1=Y(v),y2=Y(v2[i]),top=Math.min(y1,y2),bh=Math.max(4,Math.abs(y2-y1));
+      s+=wrap(i,`<rect x="${cx(i)-bw/2}" y="${top}" width="${bw}" height="${bh}" rx="${Math.min(bw/2,bh/2)}" fill="url(#${id})"><title>${esc(gs[i].l1+' '+(gs[i].l2||''))}: ${clock(v)} to ${clock(v2[i])}</title></rect>`)});
+  }
+  const every=two?1:Math.ceil(N/6);
+  gs.forEach((x,i)=>{if((N-1-i)%every)return;
+    const fs=two?(w/N<46?12:14):12;s+=`<text x="${cx(i)}" y="${T+h+22}" text-anchor="middle" font-size="${fs}">${esc(x.l1)}</text>${two?`<text x="${cx(i)}" y="${T+h+40}" text-anchor="middle" font-size="${fs}">${esc(x.l2)}</text>`:''}`});
+  return s+'</svg>';
+}
+const cc=(title,svg,hint)=>`<div class="chartcard"><h3 style="font-weight:300;font-size:30px">${title}</h3><div class="chart">${svg}</div>${hint?`<p class="hint">${hint}</p>`:''}</div>`;
+function renderTrends(){
+  const el=$('#v-trends'),gs=groups(),y=window.scrollY;
+  const head=`<h1 style="padding-top:18px">Statistics</h1>
+  <div class="segbar" role="group" aria-label="Period">${[['days','Days'],['weeks','Weeks'],['months','Months'],['all','All']].map(([v,l])=>`<button data-r="${v}" aria-pressed="${S.range===v}">${l}</button>`).join('')}</div>
+  ${S.nights.length?'':'<p class="hint">Example nights until you track your own.</p>'}`;
+  if(!gs.length){el.innerHTML=head+'<p class="msg">No nights yet.</p>';bindTrends(el);return}
+  const ns=gs.flatMap(x=>x.ns),as=ns.map(analyze),goal=S.settings.goal;
+  const pct=v=>Math.round(v)+'%',hrs=(v,full)=>full?fmtDur(v):Math.round(v/60)+'h',mins=(v,full)=>full?durS(v):Math.round(v)+'m',tm=v=>clock(v).replace(':00','');
+  const per=S.range==='days'?'Each bar is one night.':S.range==='weeks'?'Each bar is the average night of a week.':S.range==='months'?'Each bar is the average night of a month.':'Every night you tracked.';
+  el.innerHTML=head+`
+  <div class="card"><div class="statgrid">
+    <div class="stat"><span class="eyebrow">Sleep quality</span><span class="num">${Math.round(avgOf(as,a=>a.quality))}%</span></div>
+    <div class="stat"><span class="eyebrow">Time asleep</span><span class="num">${fmtDur(avgOf(as,a=>a.asleep))}</span></div>
+    <div class="stat"><span class="eyebrow">Goal reached</span><span class="num">${as.filter(a=>a.asleep>=goal-10).length} of ${ns.length}</span><span class="d">nights at ${fmtDur(goal)}</span></div>
+    <div class="stat"><span class="eyebrow">Sleep debt</span><span class="num">${fmtDur(as.reduce((t,a)=>t+Math.max(0,goal-a.asleep),0))}</span><span class="d">across these nights</span></div>
+  </div><p class="hint">${per} The dashed line is the average.</p></div>
+  ${cc('Sleep quality',chart('bar',gs,n=>analyze(n).quality,{max:100,fmt:pct,color:'q',glow:1,label:'Sleep quality'}))}
+  <div class="sec">Duration</div>
+  ${cc('Time in bed',chart('bar',gs,n=>analyze(n).inBed,{hours:1,fmt:hrs,color:'w',label:'Time in bed'}))}
+  ${cc('Time asleep',chart('bar',gs,n=>analyze(n).asleep,{hours:1,fmt:hrs,color:'w',label:'Time asleep'}))}
+  <div class="sec">Quality</div>
+  ${cc('Asleep after',chart('line',gs,n=>analyze(n).onset,{fmt:mins,label:'Minutes to fall asleep'}))}
+  ${cc('Deep sleep',chart('bar',gs,n=>analyze(n).deep,{hours:1,fmt:hrs,color:'blue',label:'Deep sleep'}))}
+  ${cc('Dream sleep',chart('bar',gs,n=>analyze(n).dream,{fmt:mins,color:'dream',label:'Dream sleep'}))}
+  <div class="sec">Routine</div>
+  ${cc('Regularity',chart('range',gs,null,{time:1,invert:1,fmt:tm,color:'w',label:'Bedtime to wake-up'}),'Each bar runs from bedtime down to wake-up. The closer they line up, the more regular your sleep.')}
+  ${cc('Went to bed',chart('line',gs,n=>tod(n.start),{time:1,fmt:tm,label:'Bedtime'}))}
+  ${cc('Woke up',chart('line',gs,n=>tod(n.end),{time:1,fmt:tm,label:'Wake-up time'}))}
+  <div class="sec">Sounds</div>
+  ${cc('Snoring',chart('bar',gs,n=>analyze(n).snoreMin,{fmt:mins,color:'amber',label:'Minutes of snoring'}))}
+  ${cc('Coughing',chart('bar',gs,n=>analyze(n).coughs,{fmt:v=>Math.round(v*10)/10+'',color:'coral',label:'Coughs per night'}),'Coughs per night.')}
+  <div class="sec">Sleep notes</div>
+  ${impactCard()}${moodCard(ns)}`;
+  bindTrends(el);window.scrollTo(0,y);
+}
+function bindTrends(el){
+  el.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{S.range=b.dataset.r;renderTrends()});
+  el.querySelectorAll('svg [data-id]').forEach(b=>b.addEventListener('click',()=>openReport(b.getAttribute('data-id'))));
+}
+function impactCard(){
+  const all=shownNights().slice(0,90),tags=[...new Set(all.flatMap(n=>n.tags||[]))];
+  const rows=tags.map(t=>{const w=all.filter(n=>(n.tags||[]).includes(t)),wo=all.filter(n=>!(n.tags||[]).includes(t));
+    if(w.length<2||wo.length<2)return null;
+    return {t,n:w.length,d:avgOf(w,n=>analyze(n).quality)-avgOf(wo,n=>analyze(n).quality)}}).filter(Boolean).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+  const body=rows.length?`<div class="impact">${rows.map(r=>{const d=Math.round(r.d),wd=Math.min(50,Math.abs(r.d)*2.5);
+    return `<span>${esc(r.t)}<small>${r.n} nights</small></span><span class="bar"><i style="${d>=0?'left:50%':'right:50%'};width:${wd}%;background:var(${d>=0?'--up':'--down'})"></i></span><span class="n ${d>0?'up':d<0?'dn':''}">${d>0?'+':d<0?'−':''}${Math.abs(d)}%</span>`}).join('')}</div>`
+    :'<p class="hint">Tag a few nights with sleep notes, and some without, to see what changes your sleep.</p>';
+  return `<div class="card"><div><h3>What affects your sleep</h3><p class="hint">Sleep quality on nights with each note, compared with nights without it.</p></div>${body}</div>`;
+}
+function moodCard(list){
+  const rows=Object.keys(MOODS).map(m=>{const x=list.filter(n=>n.mood===m);return {m,k:x.length,q:x.length?Math.round(avgOf(x,n=>analyze(n).quality)):null}});
+  if(!rows.some(r=>r.k))return '';
+  return `<div class="card"><h3>Wake-up mood</h3><div class="statgrid" style="grid-template-columns:repeat(3,1fr)">${rows.map(r=>`<div class="stat"><span class="eyebrow" style="display:flex;align-items:center;gap:6px">${face(r.m)}${MOODS[r.m]}</span><span class="num">${r.k}×</span><span class="d">${r.q==null?'–':'Avg quality '+r.q+'%'}</span></div>`).join('')}</div></div>`;
+}
+
+/* ================= Profile ================= */
+function renderSettings(){
+  const st=S.settings,el=$('#v-more'),all=shownNights(),as=all.map(analyze);
+  const ex=!S.nights.length;
+  const set=(id,icon,label,val,body)=>`<details class="set" data-set="${id}" ${S.openSet===id?'open':''}><summary>${icon.replace('<svg','<svg class="ic"')}<span class="grow">${label}</span><span class="val">${val}</span>${IC.chev}</summary><div class="body">${body}</div></details>`;
+  const tog=(id,icon,label,on)=>`<div class="set"><label class="head tog" style="cursor:pointer">${icon.replace('<svg','<svg class="ic"')}<span class="grow">${label}</span><input type="checkbox" id="${id}" ${on?'checked':''}></label></div>`;
+  el.innerHTML=`
+  <div class="pstats">
+    <div class="pstat">${IC.moon}<div><span class="num">${S.nights.length}</span><span class="lab">Nights</span></div></div>
+    <div class="pstat"><svg viewBox="0 0 100 100" aria-hidden="true">${ringInner(as.length?Math.round(avgOf(as,a=>a.quality)):0,14)}</svg><div><span class="num">${as.length?Math.round(avgOf(as,a=>a.quality))+'%':'–'}</span><span class="lab">Avg. quality${ex?' (examples)':''}</span></div></div>
+    <div class="pstat">${IC.clock}<div><span class="num">${as.length?fmtDur(avgOf(as,a=>a.asleep)):'–'}</span><span class="lab">Avg. time asleep</span></div></div>
+    <div class="pstat" style="color:var(--light)">${IC.zz}<div style="color:var(--ink)"><span class="num">${as.length?durS(avgOf(as,a=>a.snoreMin)):'–'}</span><span class="lab">Avg. snoring</span></div></div>
+  </div>
+  <button class="link" id="pAll">${IC.folder.replace('<svg','<svg style="width:26px;height:26px;color:var(--dawn)"')}<span class="grow">All nights</span><span class="val">${all.length}</span>${IC.chev}</button>
+  <h2 class="sec">Settings</h2>
+  <div>
+  ${set('goal',IC.goal,'Sleep goal',fmtDur(st.goal),`${goalStepper()}<p>Used for your bedtime suggestion, sleep debt and the goal stats.</p>`)}
+  ${set('win',IC.alarm,'Wake up phase',st.win<0?'Off':st.win===0?'Exact':st.win+' min',`<div class="chips">${[[-1,'No alarm'],...WINS].map(([v,l])=>`<button class="chip" data-w="${v}" aria-pressed="${st.win===v}">${l}</button>`).join('')}</div><p>From the start of the window, the alarm rings as soon as you start stirring, which is when waking feels easiest. If you stay deeply asleep, it rings at your set time.</p>`)}
+  ${set('snd',IC.music,'Alarm sound',MELODIES[st.sound].name,`<div class="chips">${Object.entries(MELODIES).map(([k,m])=>`<button class="chip" data-snd="${k}" aria-pressed="${st.sound===k}">${m.name}</button>`).join('')}</div><button class="ghost small" id="sndPlay" style="align-self:flex-start">${alarmSnd?'Stop':'Play it'}</button><p>Every alarm starts quietly and gets louder over 90 seconds.</p>`)}
+  ${set('snz',IC.snooze,'Snooze',st.snooze==='smart'?'Intelligent':st.snooze==='9'?'9 min':'Off',`<div class="chips">${[['off','Off'],['9','9 minutes'],['smart','Intelligent']].map(([k,l])=>`<button class="chip" data-sz="${k}" aria-pressed="${st.snooze===k}">${l}</button>`).join('')}</div><p>${st.snooze==='smart'?'Each snooze is shorter: 9, 6, 4, 3, then 2 minutes.':st.snooze==='9'?'Every snooze lasts 9 minutes.':'No snooze button. The alarm rings until you get up.'}</p>`)}
+  ${set('aid',IC.wave,'Sleep aid',st.aid==='off'?'Off':AIDS[st.aid],`<div class="chips">${[['off','Off'],...Object.entries(AIDS)].map(([k,v])=>`<button class="chip" data-aid="${k}" aria-pressed="${st.aid===k}">${v}</button>`).join('')}</div>${st.aid==='off'?'':`<div class="chips">${[15,30,45,60].map(m=>`<button class="chip" data-am="${m}" aria-pressed="${st.aidMin===m}">${m} min</button>`).join('')}</div>`}<p>While the sleep aid plays, the microphone is off so it doesn't hear its own sound. When it fades out, listening starts again.</p>`)}
+  ${tog('pSnore',IC.mic,'Record sounds',st.snore)}
+  ${tog('pMotion',IC.move,'Feel movement',st.motion)}
+  ${set('tags',IC.tag,'Sleep notes',st.tags.length,`<p>The notes you can tag each night. Tap × to remove one. Past nights keep their notes.</p><div class="chips">${st.tags.map(t=>`<button class="chip" data-rm="${esc(t)}" aria-label="Remove ${esc(t)}">${esc(t)}<span class="x">×</span></button>`).join('')}</div><div class="addrow"><input id="setNewTag" maxlength="24" placeholder="New note"><button class="ghost small" id="setTagAdd">Add</button></div>`)}
+  ${set('bk',IC.cloud,'Back up your nights',S.nights.length+' saved',`<p>Your nights live only on this phone. Copy a backup and keep it in a note or an email, then paste it here to bring the nights back on any phone. Sound clips aren't included.</p>
+    <button class="ghost" id="bkCopy">Copy backup (${S.nights.length} night${S.nights.length===1?'':'s'})</button>
+    <textarea id="bkText" placeholder="Paste a backup here to restore it"></textarea>
+    <div class="row"><input type="file" id="bkFile" accept=".json,.txt,application/json,text/plain" style="font-size:14px;color:var(--mute);min-width:0"><button class="ghost small" id="bkRestore">Restore</button></div>`)}
+  ${set('reset',IC.trash,'Reset Ninna Nanna','',`<p>Wipes every night, sound clip, sleep note and setting from this phone and starts fresh, like a new install. Copy a backup first if you might want your nights back.</p>
+    <button class="ghost" id="resetGo" style="color:var(--down);border-color:var(--down)">Reset everything</button>`)}
+  ${set('how',IC.info,'How Ninna Nanna works','',`
+    <p><b style="color:var(--ink)">During the night.</b> It listens through the microphone and feels movement through the motion sensor. Every minute it notes how restless you were. Calm minutes mean deep sleep, restless ones mean light sleep or awake. Calm stretches later in the night, after deep sleep, are counted as dream sleep.</p>
+    <p><b style="color:var(--ink)">Sounds.</b> Low, regular sounds a few seconds apart are snoring. Longer, higher sounds are sleep talking. Short, sharp bursts are coughing. It records a 10-second clip of each that you can play in the morning.</p>
+    <p><b style="color:var(--ink)">Smart alarm.</b> Pick a time and a wake-up phase. Within the phase, it rings once you start stirring. Otherwise it rings at your set time.</p>
+    <ul><li>The screen has to stay on, so keep the phone charging. If the screen turns off, tracking pauses until you open it again.</li>
+    <li>Keep the ringer volume up. Silent mode can mute the alarm on iPhone.</li>
+    <li>Two people in one bed blur the movement reading. The sound part still works.</li>
+    <li>Heart rate, steps and Apple Watch data aren't available, because Ninna Nanna runs as a web page.</li>
+    <li>Stages and sounds are estimates from sound and movement, like other phone sleep apps, not a medical test.</li>
+    <li>The microphone only works when Ninna Nanna opens from its own web address. Open it there on the phone and choose <b style="color:var(--ink)">Add to Home Screen</b> so it opens like an app.</li></ul>`)}
+  </div>`;
+  el.querySelectorAll('details.set').forEach(d=>d.addEventListener('toggle',()=>{if(d.open){S.openSet=d.dataset.set;el.querySelectorAll('details.set').forEach(x=>{if(x!==d)x.open=false})}else if(S.openSet===d.dataset.set)S.openSet=null}));
+  const rr=()=>{const y=window.scrollY;renderSettings();window.scrollTo(0,y)};
+  $('#pAll').onclick=nightsSheet;
+  el.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{const v=+b.dataset.w;if(v>=0)st.lastWin=v;st.win=v;saveSettings();rr()});
+  el.querySelectorAll('[data-snd]').forEach(b=>b.onclick=()=>{st.sound=b.dataset.snd;saveSettings();stopAlarmSound();startAlarmSound(true);rr()});
+  $('#sndPlay').onclick=()=>{if(alarmSnd)stopAlarmSound();else startAlarmSound(true);rr()};
+  el.querySelectorAll('[data-sz]').forEach(b=>b.onclick=()=>{st.snooze=b.dataset.sz;saveSettings();rr()});
+  el.querySelectorAll('[data-aid]').forEach(b=>b.onclick=()=>{st.aid=b.dataset.aid;saveSettings();rr()});
+  el.querySelectorAll('[data-am]').forEach(b=>b.onclick=()=>{st.aidMin=+b.dataset.am;saveSettings();rr()});
+  $('#pSnore').onchange=e=>{st.snore=e.target.checked;saveSettings()};
+  $('#pMotion').onchange=e=>{st.motion=e.target.checked;saveSettings()};
+  el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{st.tags=st.tags.filter(t=>t!==b.dataset.rm);st.tonight=st.tonight.filter(t=>t!==b.dataset.rm);saveSettings();rr()});
+  $('#setTagAdd').onclick=()=>{addTag($('#setNewTag'),false);rr()};
+  $('#setNewTag').onkeydown=e=>{if(e.key==='Enter')$('#setTagAdd').click()};
+  $('#bkCopy').onclick=()=>{const t=JSON.stringify({app:'dolcenotte',v:2,saved:Date.now(),settings:S.settings,nights:S.nights});
+    const fallback=()=>{const ta=$('#bkText');ta.value=t;ta.focus();ta.select();toast('Backup is in the box below. Copy it from there.')};
+    try{navigator.clipboard.writeText(t).then(()=>toast('Backup copied. Paste it into a note or email to keep it.'),fallback)}catch(e){fallback()}};
+  $('#bkFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#bkText').value=r.result};r.readAsText(f)};
+  $('#bkRestore').onclick=()=>{
+    let d;try{d=JSON.parse($('#bkText').value)}catch(e){toast("That isn't a Ninna Nanna backup. Paste the whole text you copied.");return}
+    if(!d||!Array.isArray(d.nights)){toast("That isn't a Ninna Nanna backup. Paste the whole text you copied.");return}
+    const have=new Set(S.nights.map(n=>n.id));let k=0;
+    d.nights.forEach(n=>{if(n&&n.id&&Array.isArray(n.mins)&&!have.has(n.id)){n.clips=[];S.nights.push(n);k++}});
+    if(d.settings&&Array.isArray(d.settings.tags))d.settings.tags.forEach(t=>{if(!st.tags.includes(t))st.tags.push(t)});
+    saveNights();saveSettings();$('#bkText').value='';
+    toast(k?`Restored ${k} night${k===1?'':'s'}.`:'Those nights are already on this phone.');rr();
+  };
+  $('#resetGo').onclick=async e=>{const b=e.currentTarget;
+    if(!b.dataset.sure){b.dataset.sure='1';b.textContent='Tap again to wipe everything';b.style.background='var(--down)';b.style.color='#1a0a08';clearTimeout(b._t);b._t=setTimeout(()=>{delete b.dataset.sure;b.textContent='Reset everything';b.style.background='';b.style.color='var(--down)'},5000);return}
+    b.disabled=true;b.textContent='Resetting…';
+    try{Object.keys(localStorage).filter(k=>k.startsWith(KEY+'.')).forEach(k=>localStorage.removeItem(k))}catch(err){}
+    try{const db=await idb();db.close();idbP=null}catch(err){}
+    try{await new Promise(r=>{const q=indexedDB.deleteDatabase('dolcenotte');q.onsuccess=q.onerror=q.onblocked=()=>r()})}catch(err){}
+    S.openSet=null;location.reload();
+  };
+}
+
+/* ---------- sound ---------- */
+let ctx=null;
+function getCtx(){if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)ctx=new AC()}return ctx}
+function tone(c,out,f,t,len,type,vol){const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+len);o.connect(g).connect(out);o.start(t);o.stop(t+len+.1)}
+function chirp(c,out,t,f){const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.35,t+.07);o.frequency.exponentialRampToValueAtTime(f*.9,t+.13);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.connect(g).connect(out);o.start(t);o.stop(t+.17)}
+const MELODIES={
+  chimes:{name:'Dawn chimes',every:3600,play:(c,o,t)=>[523.25,659.25,783.99,1046.5,783.99].forEach((f,k)=>tone(c,o,f,t+k*.32,1.6,'sine',.5))},
+  musicbox:{name:'Music box',every:3000,play:(c,o,t)=>[1046.5,1318.5,1568,1318.5,1174.66,1046.5,783.99].forEach((f,k)=>tone(c,o,f,t+k*.24,1.1,'triangle',.32))},
+  birds:{name:'Birdsong',every:2400,play:(c,o,t)=>{for(let k=0;k<3;k++)chirp(c,o,t+k*.17+Math.random()*.04,2400+Math.random()*900);for(let k=0;k<2;k++)chirp(c,o,t+1.1+k*.21,3000+Math.random()*600)}},
+  bells:{name:'Soft bells',every:4200,play:(c,o,t)=>[392,523.25,440].forEach((f,k)=>[[1,.4,3],[2.76,.14,1.8],[5.4,.06,1]].forEach(([r,v,l])=>tone(c,o,f*r,t+k*1.1,l,'sine',v)))}
+};
+if(!MELODIES[S.settings.sound])S.settings.sound='chimes';
+let alarmSnd=null;
+function startAlarmSound(preview){
+  const c=getCtx();if(!c)return;try{c.resume()}catch(e){}
+  stopAlarmSound();
+  const mel=MELODIES[S.settings.sound]||MELODIES.chimes;
+  const master=c.createGain();master.gain.setValueAtTime(preview?0.5:0.05,c.currentTime);if(!preview)master.gain.linearRampToValueAtTime(0.8,c.currentTime+90);master.connect(c.destination);
+  const phrase=()=>mel.play(c,master,c.currentTime+0.05);
+  phrase();const iv=setInterval(()=>{phrase();if(!preview)try{navigator.vibrate&&navigator.vibrate([400,200,400])}catch(e){}},mel.every);
+  alarmSnd={master,iv};
+  if(preview)alarmSnd.t=setTimeout(()=>{stopAlarmSound();if(S.view==='more')renderSettings();if(S.view==='tonight')renderTonight()},8000);
+}
+function stopAlarmSound(){if(!alarmSnd)return;clearInterval(alarmSnd.iv);clearTimeout(alarmSnd.t);try{alarmSnd.master.disconnect()}catch(e){}alarmSnd=null}
+$('#testSound').onclick=()=>{if(alarmSnd)stopAlarmSound();else startAlarmSound(true);renderTonight()};
+
+/* ---------- sleep aid ---------- */
+const AIDS={rain:'Rain',ocean:'Ocean waves',brown:'Brown noise',fan:'Fan'};
+if(S.settings.aid!=='off'&&!AIDS[S.settings.aid])S.settings.aid='off';
+function noiseBuf(c,kind){const len=c.sampleRate*4,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);let last=0,b0=0,b1=0,b2=0;
+  for(let i=0;i<len;i++){const w=Math.random()*2-1;
+    if(kind==='brown'){last=(last+0.02*w)/1.02;d[i]=last*3.5}
+    else if(kind==='pink'){b0=.99765*b0+w*.099046;b1=.963*b1+w*.2965164;b2=.57*b2+w*1.0526913;d[i]=(b0+b1+b2+w*.1848)*.11}
+    else d[i]=w*.5}
+  return b}
+let aidSnd=null;
+function startAid(kind,minutes){
+  const c=getCtx();if(!c)return null;try{c.resume()}catch(e){}
+  stopAid();
+  const now=c.currentTime,master=c.createGain();master.gain.setValueAtTime(0,now);master.gain.linearRampToValueAtTime(.5,now+5);master.connect(c.destination);
+  const src=c.createBufferSource();src.loop=true;const nodes=[src];
+  const filt=(type,f)=>{const x=c.createBiquadFilter();x.type=type;x.frequency.value=f;return x};
+  let out;
+  if(kind==='rain'){src.buffer=noiseBuf(c,'pink');out=src.connect(filt('highpass',500)).connect(filt('lowpass',7000))}
+  else if(kind==='ocean'){src.buffer=noiseBuf(c,'brown');const sw=c.createGain();sw.gain.value=.55;const lfo=c.createOscillator();lfo.frequency.value=.09;const dp=c.createGain();dp.gain.value=.45;lfo.connect(dp).connect(sw.gain);lfo.start();nodes.push(lfo);out=src.connect(filt('lowpass',1000)).connect(sw)}
+  else if(kind==='brown'){src.buffer=noiseBuf(c,'brown');out=src.connect(filt('lowpass',600))}
+  else{src.buffer=noiseBuf(c,'white');out=src.connect(filt('highpass',120)).connect(filt('lowpass',1400));const hum=c.createOscillator();hum.frequency.value=92;const hg=c.createGain();hg.gain.value=.015;hum.connect(hg).connect(master);hum.start();nodes.push(hum)}
+  out.connect(master);src.start();
+  aidSnd={master,nodes};
+  if(minutes){const end=now+minutes*60;master.gain.setValueAtTime(.5,Math.max(now+5.1,end-120));master.gain.linearRampToValueAtTime(0,end);aidSnd.t=setTimeout(stopAid,minutes*60000+500)}
+  return aidSnd;
+}
+function stopAid(){if(!aidSnd)return;clearTimeout(aidSnd.t);aidSnd.nodes.forEach(n=>{try{n.stop()}catch(e){}});try{aidSnd.master.disconnect()}catch(e){}aidSnd=null}
+
+/* ---------- tracking ---------- */
+async function lockScreen(){try{if('wakeLock' in navigator)S.wl=await navigator.wakeLock.request('screen')}catch(e){S.wl=null}}
+const MIC={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
+function startFailed(why){
+  const inPreview=window.top!==window;
+  $('#startMsg').hidden=false;
+  $('#startMsg').innerHTML=`<span>${why}</span>${inPreview?'<span class="hint">This preview can\'t use the microphone. Open Ninna Nanna from its own web address to track real nights (see Profile, How Ninna Nanna works).</span>':'<span class="hint">Allow the microphone for this site in your browser settings, then try again.</span>'}<button class="ghost" id="seeExample">Show me an example morning</button>`;
+  $('#seeExample').onclick=()=>openReport(getExamples()[0].id);
+}
+$('#startBtn').onclick=async()=>{
+  $('#startMsg').hidden=true;
+  stopAid();stopAlarmSound();
+  const c=getCtx();if(c)try{c.resume()}catch(e){}
+  let motionOk=false;
+  if(S.settings.motion&&window.DeviceMotionEvent){
+    if(typeof DeviceMotionEvent.requestPermission==='function'){try{motionOk=(await DeviceMotionEvent.requestPermission())==='granted'}catch(e){}}
+    else motionOk=true;
+  }
+  let stream=null;
+  try{stream=await navigator.mediaDevices.getUserMedia(MIC)}catch(e){}
+  if(!stream||!c){startFailed("Ninna Nanna couldn't use the microphone, so the night didn't start.");return}
+  beginNight(stream,motionOk);
+};
+function openMic(T,stream){
+  const c=getCtx();T.stream=stream;
+  T.an=c.createAnalyser();T.an.fftSize=2048;T.an.smoothingTimeConstant=0.2;
+  T.src=c.createMediaStreamSource(stream);T.src.connect(T.an);
+  T.buf=new Float32Array(T.an.fftSize);T.fbuf=new Float32Array(T.an.frequencyBinCount);T.floor=null;T.loudStart=0;T.audioOn=true;
+}
+function closeMic(T){T.audioOn=false;if(T.stream)T.stream.getTracks().forEach(t=>t.stop());try{T.src&&T.src.disconnect()}catch(e){}T.stream=null;T.an=null;T.loudStart=0}
+
+function beginNight(stream,motionOk){
+  const now=Date.now(),w=S.settings.win,st=S.settings;
+  const T=S.T={start:now,alarm:w<0?null:{at:alarmAt(),win:w},snoozeUntil:null,snoozes:0,mins:[],cur:{m:0,s:0,z:0,t:0,c:0,n:0,since:now},
+    floor:null,loudStart:0,lowSum:0,lowN:0,peak:0,cands:[],clipCount:0,lastClip:0,rec:null,recDone:null,
+    stream:null,an:null,src:null,motionOk,motionSeen:false,lastMag:null,lastSec:0,clips:[],ringing:false,wokeBy:'manual',wokeAt:null,hiddenAt:null,audioOn:false,
+    aid:null,aidUntil:null,micLost:false};
+  openMic(T,stream);
+  if(st.aid!=='off'&&AIDS[st.aid]){
+    // the phone would otherwise hear its own sleep sound all night, so the mic waits until the fade-out
+    closeMic(T);T.aid={kind:st.aid,min:st.aidMin};T.aidUntil=now+st.aidMin*60000;startAid(st.aid,st.aidMin);
+  }
+  T.onMotion=e=>onMotion(T,e);
+  if(motionOk)window.addEventListener('devicemotion',T.onMotion);
+  T.audioIv=setInterval(()=>sampleAudio(T),100);
+  T.tickIv=setInterval(()=>tick(T),1000);
+  lockScreen();
+  $('#nsAlarm').textContent=T.alarm?(T.alarm.win?`Alarm ${hm(T.alarm.at-T.alarm.win*60000)}–${hm(T.alarm.at)}`:`Alarm ${hm(T.alarm.at)}`):'No alarm';
+  $('#nsAidStop').hidden=!T.aidUntil;
+  $('#nightScreen').hidden=false;
+  $('#nsStatus').textContent=statusText(T);
+  tick(T);
+  setTimeout(()=>{if(S.T===T)$('#nsStatus').textContent=statusText(T)},4000);
+}
+function reopenMic(T){
+  T.aidUntil=null;stopAid();$('#nsAidStop').hidden=true;
+  navigator.mediaDevices.getUserMedia(MIC).then(s=>{if(S.T!==T||T.ringing){s.getTracks().forEach(t=>t.stop());return}openMic(T,s);$('#nsStatus').textContent=statusText(T)})
+    .catch(()=>{T.micLost=true;$('#nsStatus').textContent=statusText(T)});
+}
+$('#nsAidStop').onclick=()=>{const T=S.T;if(T&&T.aidUntil){T.aid.min=Math.max(1,Math.round((Date.now()-T.start)/60000));reopenMic(T)}};
+function statusText(T){
+  const parts=[];
+  if(T.aidUntil)parts.push(`${AIDS[T.aid.kind]} until ${hm(T.aidUntil)}`);
+  else if(T.audioOn)parts.push('Listening');
+  else if(T.micLost)parts.push('Microphone off, movement only');
+  if(T.motionSeen)parts.push('feeling movement');
+  if(S.wl===null&&'wakeLock' in navigator)parts.push('turn off auto-lock tonight');
+  return parts.join(' · ');
+}
+function sampleAudio(T){
+  if(!T.audioOn||!T.an)return;
+  T.an.getFloatTimeDomainData(T.buf);
+  let s=0;for(let i=0;i<T.buf.length;i++)s+=T.buf[i]*T.buf[i];
+  const db=20*Math.log10(Math.sqrt(s/T.buf.length)+1e-9),now=Date.now();
+  if(T.floor===null)T.floor=db;
+  T.floor=db<T.floor?T.floor*0.9+db*0.1:T.floor+0.01;
+  const over=db-T.floor;
+  if(over>T.cur.n)T.cur.n=over;
+  $('#nsLevel').style.width=Math.max(0,Math.min(100,over*5))+'%';
+  if(over>9){
+    if(!T.loudStart){T.loudStart=now;T.lowSum=0;T.lowN=0;T.peak=0}
+    T.an.getFloatFrequencyData(T.fbuf);
+    const hz=T.an.context.sampleRate/T.an.fftSize;let lo=0,all=0;
+    for(let i=Math.ceil(60/hz);i<Math.min(T.fbuf.length,4000/hz);i++){const p=Math.pow(10,T.fbuf[i]/10);all+=p;if(i*hz<500)lo+=p}
+    T.lowSum+=all?lo/all:0;T.lowN++;T.peak=Math.max(T.peak,over);
+    if(now-T.loudStart>6000)endSound(T,now);
+  }else if(T.loudStart)endSound(T,now);
+}
+// sorts one burst of sound by how long it lasted, how loud it peaked and how much of it sat below 500 Hz
+function endSound(T,now){
+  const d=(now-T.loudStart)/1000,ratio=T.lowN?T.lowSum/T.lowN:0,peak=T.peak;T.loudStart=0;
+  T.cur.s++;
+  if(d>=0.3&&d<=3.5&&ratio>0.5){
+    T.cands.push(now);T.cands=T.cands.filter(t=>now-t<40000);
+    const k=T.cands.length;
+    if(k>=3){const i1=(T.cands[k-1]-T.cands[k-2])/1000,i2=(T.cands[k-2]-T.cands[k-3])/1000;
+      if(i1>=1.8&&i1<=9&&i2>=1.8&&i2<=9){T.cur.z=1;maybeClip(T,'Snoring')}}
+    return;
+  }
+  if(d>=0.12&&d<=0.7&&peak>16&&ratio<0.45){T.cur.c++;maybeClip(T,'Coughing');return}
+  if(d>=0.8&&ratio<=0.5&&peak>10){T.cur.t++;maybeClip(T,'Talking');return}
+  if(peak>14&&d>0.8)maybeClip(T,'Sound');
+}
+function maybeClip(T,kind){
+  const now=Date.now();
+  if(!S.settings.snore||T.rec||!T.stream||T.clipCount>=25||now-T.lastClip<90000||!window.MediaRecorder)return;
+  try{
+    const rec=new MediaRecorder(T.stream),chunks=[];T.rec=rec;T.clipCount++;T.lastClip=now;
+    rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    T.recDone=new Promise(res=>{rec.onstop=async()=>{const id='c'+now;
+      try{await clipOp('put',id,new Blob(chunks,{type:rec.mimeType||'audio/mp4'}));T.clips.push({id,t:now,kind})}catch(e){}
+      T.rec=null;res()}});
+    rec.start();setTimeout(()=>{try{if(rec.state!=='inactive')rec.stop()}catch(e){}},10000);
+  }catch(e){T.rec=null}
+}
+function onMotion(T,e){
+  const a=e.accelerationIncludingGravity;if(!a||a.x==null)return;
+  T.motionSeen=true;const mag=Math.hypot(a.x,a.y,a.z);
+  if(T.lastMag!==null&&Math.abs(mag-T.lastMag)>0.06){const sec=Math.floor(Date.now()/1000);if(sec!==T.lastSec){T.lastSec=sec;T.cur.m++}}
+  T.lastMag=T.lastMag===null?mag:T.lastMag*0.8+mag*0.2;
+}
+function packMin(c){const o={m:c.m,s:c.s};if(c.z)o.z=1;if(c.t)o.t=c.t;if(c.c)o.c=c.c;if(c.n>=1)o.n=Math.round(c.n);return o}
+function tick(T){
+  if(S.T!==T)return;
+  const now=Date.now();
+  $('#nsClock').textContent=hm(now);$('#rsClock').textContent=hm(now);
+  if(T.aidUntil&&now>=T.aidUntil)reopenMic(T);
+  const el=now-T.cur.since;
+  if(el>=60000){const k=Math.floor(el/60000);T.mins.push(packMin(T.cur));
+    for(let i=1;i<k;i++)T.mins.push({m:0,s:0,g:1});
+    T.cur={m:0,s:0,z:0,t:0,c:0,n:0,since:T.cur.since+k*60000};
+    $('#nsInner').style.transform=`translate(${Math.round(Math.random()*40-20)}px,${Math.round(Math.random()*80-40)}px)`;
+    $('#nsStatus').textContent=statusText(T);
+  }
+  if(T.alarm&&!T.ringing){
+    const target=T.snoozeUntil||T.alarm.at;
+    if(now>=target)ring(T,T.snoozeUntil?'snooze':'end');
+    else if(!T.snoozeUntil&&T.alarm.win>0&&now>=T.alarm.at-T.alarm.win*60000){
+      const nm=!T.motionSeen,last=T.mins.slice(-2).reduce((s,x)=>s+act(x,nm),0)+act(T.cur,nm);
+      if(last>=2.5)ring(T,'smart');
+    }
+  }
+}
+const snoozeLen=T=>S.settings.snooze==='9'?9:[9,6,4,3,2][Math.min(T.snoozes,4)];
+function ring(T,why){
+  T.ringing=true;if(why!=='snooze'){T.wokeBy=why;T.wokeAt=Date.now()}
+  // phones send page audio to the quiet earpiece while the mic is open, so close it first
+  stopAid();T.aidUntil=null;closeMic(T);
+  $('#rsWhy').textContent=why==='smart'?`You were stirring, so here's your wake-up, ${Math.max(0,Math.round((T.alarm.at-T.wokeAt)/60000))} min before ${hm(T.alarm.at)}.`:why==='snooze'?'Snooze is over.':"It's time.";
+  $('#snoozeBtn').hidden=S.settings.snooze==='off';
+  $('#snoozeBtn').textContent=`Snooze ${snoozeLen(T)} min`;
+  $('#ringScreen').hidden=false;startAlarmSound();
+}
+$('#snoozeBtn').onclick=()=>{const T=S.T;if(!T)return;stopAlarmSound();T.ringing=false;T.snoozeUntil=Date.now()+snoozeLen(T)*60000;T.snoozes++;$('#ringScreen').hidden=true;$('#nsAlarm').textContent='Snoozing until '+hm(T.snoozeUntil)};
+$('#upBtn').onclick=()=>{stopAlarmSound();$('#ringScreen').hidden=true;endNight()};
+$('#endBtn').onclick=()=>{const b=$('#endBtn');
+  if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Tap again to end the night';setTimeout(()=>{delete b.dataset.sure;b.textContent='End night'},4000);return}
+  delete b.dataset.sure;b.textContent='End night';endNight()};
+$('#nightScreen').addEventListener('click',e=>{if(e.target.closest('button'))return;const ns=$('#nightScreen');ns.classList.add('bright');clearTimeout(ns.t);ns.t=setTimeout(()=>ns.classList.remove('bright'),5000)});
+
+async function endNight(){
+  const T=S.T;if(!T)return;S.T=null;
+  clearInterval(T.audioIv);clearInterval(T.tickIv);stopAid();
+  window.removeEventListener('devicemotion',T.onMotion);
+  if(T.rec){try{T.rec.stop()}catch(e){}}
+  if(T.recDone)await Promise.race([T.recDone,new Promise(r=>setTimeout(r,3000))]);
+  closeMic(T);
+  try{S.wl&&S.wl.release()}catch(e){}S.wl=null;
+  const now=Date.now();
+  if(now-T.cur.since>20000)T.mins.push(packMin(T.cur));
+  $('#nightScreen').hidden=true;
+  if(T.mins.length<15){T.clips.forEach(c=>clipOp('del',c.id).catch(()=>{}));toast("That was under 15 minutes, so it wasn't saved.");show('tonight');return}
+  const n={id:'n'+T.start,start:T.start,end:now,mins:T.mins,alarm:T.alarm,wokeBy:T.wokeBy,wokeAt:T.wokeAt||now,snoozes:T.snoozes,noMotion:!T.motionSeen,clips:T.clips,
+    tags:S.settings.tonight.slice(),aid:T.aid,goal:S.settings.goal,mood:null,note:''};
+  S.nights.push(n);saveNights();
+  S.settings.tonight=[];saveSettings();
+  openReport(n.id);
+}
+document.addEventListener('visibilitychange',()=>{const T=S.T;if(!T)return;
+  if(document.hidden)T.hiddenAt=Date.now();
+  else{lockScreen();if(T.hiddenAt){const m=Math.round((Date.now()-T.hiddenAt)/60000);if(m>=2)toast(`The screen was off for ${m} min, so that part wasn't tracked.`);T.hiddenAt=null}}});
+
+drawStars();
+show('tonight');
+})();
+</script>
+
+</body></html>
