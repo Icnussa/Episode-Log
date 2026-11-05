@@ -137,6 +137,10 @@ input[type=number] { width: 84px; }
 .confirm { background: var(--bg); border: 1.5px solid var(--danger); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); }
 .note { font-size: 12px; color: var(--muted); text-align: center; margin: 0; }
+.predictions { margin-top: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 10px; }
+.predictions .season-head { margin-bottom: 0; }
+.predictions textarea { min-height: 140px; field-sizing: content; }
+.predictions .saved { font-size: 12.5px; color: var(--muted); }
 .backup { display: grid; justify-items: center; gap: 10px; margin-top: 32px; }
 .backup .row { display: flex; gap: 10px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -283,7 +287,9 @@ function renderShow(s) {
         <span class="badge ${tier(ss.avg)}" style="position:static">${avgFmt(ss.avg)}</span></div>
         <div class="eps">${eps.map((r, ei) => `<button class="ep ${tier(r)}" data-rate="${si}:${ei}" aria-label="Season ${si + 1} episode ${ei + 1}, ${r ? "rated " + fmt(r) : "unrated"}">
           ${s.notes?.[si + ":" + ei] ? '<i class="dot" aria-label="Has notes"></i>' : ""}<small>E${ei + 1}</small><strong>${r ? fmt(r) : "–"}</strong></button>`).join("")}</div></section>`;
-    }).join("")}</div>`;
+    }).join("")}</div>
+    <section class="predictions"><div class="season-head"><h3>Predictions</h3><span class="saved" id="pred-saved" aria-live="polite"></span></div>
+      <textarea id="f-predictions" rows="5" maxlength="20000" placeholder="Who survives? Who's the traitor? How does it end? Write your theories here and see if you were right.">${esc(s.predictions || "")}</textarea></section>`;
 }
 
 function updateRateSheet(scrim) {
@@ -465,6 +471,19 @@ function flushNote() {
 }
 document.addEventListener("input", (e) => {
   if (e.target.id === "f-note") { clearTimeout(noteTimer); noteTimer = setTimeout(flushNote, 800); }
+});
+
+// Predictions save as you type, without re-rendering the page so the keyboard stays open.
+let predTimer = null;
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "f-predictions") return;
+  const s = shows.find((x) => x.id === view.id);
+  if (!s) return;
+  const text = e.target.value;
+  if (text.trim()) s.predictions = text; else delete s.predictions;
+  saveLocal();
+  const tag = $("#pred-saved");
+  if (tag) { tag.textContent = "Saved"; clearTimeout(predTimer); predTimer = setTimeout(() => { tag.textContent = ""; }, 1500); }
 });
 
 document.addEventListener("keydown", (e) => {
