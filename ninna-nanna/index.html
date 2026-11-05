@@ -950,7 +950,7 @@ function renderSettings(){
 
 /* ---------- sound ---------- */
 let ctx=null;
-function getCtx(){if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)ctx=new AC()}return ctx}
+function getCtx(){if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(AC){ctx=new AC();ctx.onstatechange=()=>{if(S.T&&ctx.state!=='running'&&ctx.state!=='closed'){try{ctx.resume()}catch(e){}}}}}return ctx}
 function tone(c,out,f,t,len,type,vol){const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+len);o.connect(g).connect(out);o.start(t);o.stop(t+len+.1)}
 function chirp(c,out,t,f){const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.35,t+.07);o.frequency.exponentialRampToValueAtTime(f*.9,t+.13);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.connect(g).connect(out);o.start(t);o.stop(t+.17)}
 const MELODIES={
@@ -1003,7 +1003,7 @@ function startAid(kind,minutes){
 function stopAid(){if(!aidSnd)return;clearTimeout(aidSnd.t);aidSnd.nodes.forEach(n=>{try{n.stop()}catch(e){}});try{aidSnd.master.disconnect()}catch(e){}aidSnd=null}
 
 /* ---------- tracking ---------- */
-async function lockScreen(){try{if('wakeLock' in navigator)S.wl=await navigator.wakeLock.request('screen')}catch(e){S.wl=null}}
+async function lockScreen(){try{if('wakeLock' in navigator){S.wl=await navigator.wakeLock.request('screen');S.wl.addEventListener('release',()=>{if(S.T&&!document.hidden)setTimeout(lockScreen,1000)})}}catch(e){S.wl=null}}
 const MIC={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
 function startFailed(why){
   const inPreview=window.top!==window;
@@ -1061,12 +1061,32 @@ function reopenMic(T){
   navigator.mediaDevices.getUserMedia(MIC).then(s=>{if(S.T!==T||T.ringing){s.getTracks().forEach(t=>t.stop());return}openMic(T,s);$('#nsStatus').textContent=statusText(T)})
     .catch(()=>{T.micLost=true;$('#nsStatus').textContent=statusText(T)});
 }
+// iPhones can quietly cut the mic mid-night (a notification sound, Siri, a call, the screen locking). Check every few seconds and bring it back.
+function micHealthy(T){
+  const c=getCtx();if(!T.stream||!T.an||!c)return false;
+  const tr=T.stream.getAudioTracks()[0];
+  if(!tr||tr.readyState!=='live'||tr.muted)return false;
+  if(c.state!=='running')return false;
+  if(T.zeroSince&&Date.now()-T.zeroSince>5000)return false;
+  return true;
+}
+function recoverMic(T,fromTap){
+  if(S.T!==T||T.ringing||T.aidUntil||T.reopening)return;
+  const now=Date.now();
+  if(!fromTap&&T.lastRetry&&now-T.lastRetry<20000)return;
+  T.lastRetry=now;const c=getCtx();
+  if(c&&c.state!=='running'){try{c.resume()}catch(e){}}
+  if(T.stream&&micHealthy(T))return;
+  T.reopening=true;closeMic(T);T.zeroSince=null;
+  navigator.mediaDevices.getUserMedia(MIC).then(s=>{T.reopening=false;if(S.T!==T||T.ringing||T.aidUntil){s.getTracks().forEach(t=>t.stop());return}openMic(T,s);T.micLost=false;T.floor=null;lockScreen();$('#nsStatus').textContent=statusText(T)})
+    .catch(()=>{T.reopening=false;T.micLost=true;$('#nsStatus').textContent=statusText(T)});
+}
 $('#nsAidStop').onclick=()=>{const T=S.T;if(T&&T.aidUntil){T.aid.min=Math.max(1,Math.round((Date.now()-T.start)/60000));reopenMic(T)}};
 function statusText(T){
   const parts=[];
   if(T.aidUntil)parts.push(`${AIDS[T.aid.kind]} until ${hm(T.aidUntil)}`);
   else if(T.audioOn)parts.push('Listening');
-  else if(T.micLost)parts.push('Microphone off, movement only');
+  else if(T.micLost)parts.push('Microphone stopped, tap the screen to restart it');
   if(T.motionSeen)parts.push('feeling movement');
   if(S.wl===null&&'wakeLock' in navigator)parts.push('turn off auto-lock tonight');
   return parts.join(' · ');
@@ -1076,6 +1096,7 @@ function sampleAudio(T){
   T.an.getFloatTimeDomainData(T.buf);
   let s=0;for(let i=0;i<T.buf.length;i++)s+=T.buf[i]*T.buf[i];
   const db=20*Math.log10(Math.sqrt(s/T.buf.length)+1e-9),now=Date.now();
+  if(s===0){if(!T.zeroSince)T.zeroSince=now;return}T.zeroSince=null;
   if(T.floor===null)T.floor=db;
   T.floor=db<T.floor?T.floor*0.9+db*0.1:T.floor+0.01;
   const over=db-T.floor;
@@ -1123,16 +1144,20 @@ function onMotion(T,e){
   if(T.lastMag!==null&&Math.abs(mag-T.lastMag)>0.06){const sec=Math.floor(Date.now()/1000);if(sec!==T.lastSec){T.lastSec=sec;T.cur.m++}}
   T.lastMag=T.lastMag===null?mag:T.lastMag*0.8+mag*0.2;
 }
-function packMin(c){const o={m:c.m,s:c.s};if(c.z)o.z=1;if(c.t)o.t=c.t;if(c.c)o.c=c.c;if(c.n>=1)o.n=Math.round(c.n);return o}
+function packMin(c){const o={m:c.m,s:c.s};if(c.x)o.x=1;if(c.z)o.z=1;if(c.t)o.t=c.t;if(c.c)o.c=c.c;if(c.n>=1)o.n=Math.round(c.n);return o}
 function tick(T){
   if(S.T!==T)return;
   const now=Date.now();
   $('#nsClock').textContent=hm(now);$('#rsClock').textContent=hm(now);
   if(T.aidUntil&&now>=T.aidUntil)reopenMic(T);
+  if(!T.aidUntil&&!T.ringing){
+    if(!micHealthy(T)){T.cur.x=1;if(!T.audioOn||T.micLost)T.micLost=true;recoverMic(T,false);if(now%10000<1000)$('#nsStatus').textContent=statusText(T)}
+  }
   const el=now-T.cur.since;
   if(el>=60000){const k=Math.floor(el/60000);T.mins.push(packMin(T.cur));
     for(let i=1;i<k;i++)T.mins.push({m:0,s:0,g:1});
     T.cur={m:0,s:0,z:0,t:0,c:0,n:0,since:T.cur.since+k*60000};
+    if(k>1)for(let i=T.mins.length-k+1;i<T.mins.length;i++)T.mins[i].x=1;
     $('#nsInner').style.transform=`translate(${Math.round(Math.random()*40-20)}px,${Math.round(Math.random()*80-40)}px)`;
     $('#nsStatus').textContent=statusText(T);
   }
@@ -1160,7 +1185,7 @@ $('#upBtn').onclick=()=>{stopAlarmSound();$('#ringScreen').hidden=true;endNight(
 $('#endBtn').onclick=()=>{const b=$('#endBtn');
   if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Tap again to end the night';setTimeout(()=>{delete b.dataset.sure;b.textContent='End night'},4000);return}
   delete b.dataset.sure;b.textContent='End night';endNight()};
-$('#nightScreen').addEventListener('click',e=>{if(e.target.closest('button'))return;const ns=$('#nightScreen');ns.classList.add('bright');clearTimeout(ns.t);ns.t=setTimeout(()=>ns.classList.remove('bright'),5000)});
+$('#nightScreen').addEventListener('click',e=>{if(e.target.closest('button'))return;const ns=$('#nightScreen');if(S.T)recoverMic(S.T,true);ns.classList.add('bright');clearTimeout(ns.t);ns.t=setTimeout(()=>ns.classList.remove('bright'),5000)});
 
 async function endNight(){
   const T=S.T;if(!T)return;S.T=null;
@@ -1174,7 +1199,9 @@ async function endNight(){
   if(now-T.cur.since>20000)T.mins.push(packMin(T.cur));
   $('#nightScreen').hidden=true;
   if(T.mins.length<15){T.clips.forEach(c=>clipOp('del',c.id).catch(()=>{}));toast("That was under 15 minutes, so it wasn't saved.");show('tonight');return}
-  const n={id:'n'+T.start,start:T.start,end:now,mins:T.mins,alarm:T.alarm,wokeBy:T.wokeBy,wokeAt:T.wokeAt||now,snoozes:T.snoozes,noMotion:!T.motionSeen,clips:T.clips,
+  const off=T.mins.filter(x=>x.x).length;
+  if(off>=5)setTimeout(()=>toast(`Heads up: the microphone wasn't hearing anything for about ${off} min of this night.`),1500);
+  const n={micOff:off,id:'n'+T.start,start:T.start,end:now,mins:T.mins,alarm:T.alarm,wokeBy:T.wokeBy,wokeAt:T.wokeAt||now,snoozes:T.snoozes,noMotion:!T.motionSeen,clips:T.clips,
     tags:S.settings.tonight.slice(),aid:T.aid,goal:S.settings.goal,mood:null,note:''};
   S.nights.push(n);saveNights();
   S.settings.tonight=[];saveSettings();
@@ -1182,7 +1209,7 @@ async function endNight(){
 }
 document.addEventListener('visibilitychange',()=>{const T=S.T;if(!T)return;
   if(document.hidden)T.hiddenAt=Date.now();
-  else{lockScreen();if(T.hiddenAt){const m=Math.round((Date.now()-T.hiddenAt)/60000);if(m>=2)toast(`The screen was off for ${m} min, so that part wasn't tracked.`);T.hiddenAt=null}}});
+  else{lockScreen();recoverMic(T,true);if(T.hiddenAt){const m=Math.round((Date.now()-T.hiddenAt)/60000);if(m>=2)toast(`The screen was off for ${m} min, so that part wasn't tracked.`);T.hiddenAt=null}}});
 
 drawStars();
 show('tonight');
