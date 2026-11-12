@@ -50,7 +50,7 @@ button { cursor: pointer; }
 
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); display: flex; align-items: center; gap: 12px; padding-block: 10px; }
 .brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.brand svg { width: 34px; height: 34px; flex: none; }
+.brand svg { width: 40px; height: 40px; flex: none; }
 .brand h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
 .btn { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; background: var(--surface-2); display: inline-flex; align-items: center; gap: 6px; }
 .btn.primary { background: var(--accent); color: var(--accent-fg); }
@@ -445,7 +445,7 @@ function renderLibrary() {
   }).join("")}</div>` : `<div class="empty">${LOGO}<h2>Nothing on the shelf yet</h2>
     <p>Add the series you're watching, pick a poster from your photos or files, and rate each episode as you go.</p>
     <button class="btn primary" data-act="add">＋ Add series</button></div>`;
-  return `<header class="top"><div class="brand">${LOGO}<h1>Episode Log</h1></div>
+  return `<header class="top"><div class="brand" role="img" aria-label="Episode Log">${LOGO}</div>
     ${shows.length ? `<button class="btn primary" data-act="add">＋ Add series</button>` : ""}
     <button class="avatar" data-act="profile" aria-label="Your profile">${avatarInner()}</button></header>
     ${legend}${body}
