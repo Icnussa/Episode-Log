@@ -153,7 +153,7 @@ input[type=number] { width: 84px; }
 .sec h3 { font-family: var(--body); font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
 .favs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .favs .poster { border: 0; padding: 0; box-shadow: var(--shadow); }
-.favs .ph { font-size: 13px; overflow-wrap: anywhere; }
+.favs .ph { font-size: 12px; overflow-wrap: break-word; hyphens: auto; }
 .favs .add { display: grid; place-items: center; font-size: 28px; color: var(--muted); background: var(--surface); border: 1.5px dashed var(--line); box-shadow: none; }
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .tiles .stat { text-align: center; padding: 10px 6px; }
@@ -183,6 +183,11 @@ input[type=number] { width: 84px; }
 .pick-grid .poster { box-shadow: none; }
 .pick-grid button.sel .poster { outline: 3px solid var(--accent); outline-offset: 2px; }
 .pick-grid span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crop { display: grid; justify-items: center; gap: 14px; }
+.cropbox { position: relative; width: min(280px, 78vw); aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: var(--bg); touch-action: none; cursor: grab; box-shadow: 0 0 0 3px var(--accent); user-select: none; -webkit-user-select: none; }
+.cropbox img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; -webkit-user-drag: none; }
+.zoomrow { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 320px; color: var(--muted); font-weight: 700; }
+.zoomrow input { flex: 1; accent-color: var(--accent); }
 .avatar-pick { display: flex; gap: 14px; align-items: center; }
 .logdate { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); font-weight: 600; }
 .logdate input { padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); font-size: 16px; color: var(--fg); }
@@ -251,7 +256,18 @@ function normProfile(p) {
 }
 // Log dates: show.logged = {"season:ep": "YYYY-MM-DD"}. Episodes rated before this feature have none.
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-const dateFmt = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); };
+// Episodes rated before dates were tracked get the year 2026 only (no day), so they still count in 2026's stats.
+const OLD_YEAR = "2026";
+function fillOldDates(list) {
+  let changed = false;
+  list.forEach((s) => s.seasons.forEach((eps, si) => eps.forEach((r, ei) => {
+    const k = si + ":" + ei;
+    if (r != null && r > 0 && !s.logged?.[k]) { s.logged = { ...(s.logged || {}), [k]: OLD_YEAR }; changed = true; }
+  })));
+  return changed;
+}
+const isFullDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || "");
+const dateFmt = (iso) => { if (!isFullDate(iso)) return iso; const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); };
 function allEpisodes() {
   const out = [];
   shows.forEach((s) => s.seasons.forEach((eps, si) => eps.forEach((r, ei) => { if (r != null && r > 0) out.push({ show: s, si, ei, r, date: s.logged?.[si + ":" + ei] || null }); })));
@@ -294,9 +310,97 @@ $("#avatar-file").addEventListener("change", async (e) => {
   const f = e.target.files[0];
   e.target.value = "";
   if (!f || !sheet || sheet.type !== "profile") return;
-  try { sheet.draft.pic = await readPoster(f, 320, 320); renderSheet(); }
+  try { sheet.draft.crop = await loadForCrop(f); renderSheet(); }
   catch { toast("That file isn't an image this browser can open. Try a JPG or PNG."); }
 });
+
+// Profile photo cropper: drag to move, pinch or slider to zoom, inside a circle.
+function loadForCrop(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height)); // keep memory sane on big phone photos
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve({ src: c.toDataURL("image/jpeg", 0.9), w: c.width, h: c.height, zoom: 1, cx: 0.5, cy: 0.5 });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+    img.src = url;
+  });
+}
+// crop state: zoom >= 1 (1 = image just covers the circle); cx, cy = image point (0–1) at the circle's centre
+function cropGeom(c, B) {
+  const s = (B / Math.min(c.w, c.h)) * c.zoom;
+  const W = c.w * s, H = c.h * s;
+  const hx = B / 2 / W, hy = B / 2 / H;
+  c.cx = Math.min(1 - hx, Math.max(hx, c.cx));
+  c.cy = Math.min(1 - hy, Math.max(hy, c.cy));
+  return { s, x: B / 2 - c.cx * W, y: B / 2 - c.cy * H, W, H };
+}
+function paintCrop() {
+  const box = $("#cropbox"), c = sheet?.draft?.crop;
+  if (!box || !c) return;
+  const g = cropGeom(c, box.clientWidth);
+  box.querySelector("img").style.transform = `translate(${g.x}px, ${g.y}px) scale(${g.s})`;
+  const z = $("#crop-zoom"); if (z && document.activeElement !== z) z.value = c.zoom;
+}
+const pointers = new Map();
+let pinch = null;
+document.addEventListener("pointerdown", (e) => {
+  const box = e.target.closest?.("#cropbox");
+  if (!box) return;
+  box.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  pinch = null;
+});
+document.addEventListener("pointermove", (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  const c = sheet?.draft?.crop, box = $("#cropbox");
+  if (!c || !box) return;
+  const prev = pointers.get(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const g = cropGeom(c, box.clientWidth);
+  if (pointers.size === 1) {
+    c.cx -= (e.clientX - prev.x) / g.W;
+    c.cy -= (e.clientY - prev.y) / g.H;
+  } else {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinch) c.zoom = Math.min(5, Math.max(1, c.zoom * (d / pinch)));
+    pinch = d;
+  }
+  paintCrop();
+});
+const endPointer = (e) => { pointers.delete(e.pointerId); pinch = null; };
+document.addEventListener("pointerup", endPointer);
+document.addEventListener("pointercancel", endPointer);
+document.addEventListener("wheel", (e) => {
+  if (!e.target.closest?.("#cropbox") || !sheet?.draft?.crop) return;
+  e.preventDefault();
+  const c = sheet.draft.crop;
+  c.zoom = Math.min(5, Math.max(1, c.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
+  paintCrop();
+}, { passive: false });
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "crop-zoom" || !sheet?.draft?.crop) return;
+  sheet.draft.crop.zoom = +e.target.value;
+  paintCrop();
+});
+function finishCrop() {
+  const c = sheet.draft.crop, box = $("#cropbox");
+  const B = box.clientWidth, OUT = 400, k = OUT / B;
+  const g = cropGeom(c, B);
+  const img = box.querySelector("img");
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = OUT;
+  cv.getContext("2d").drawImage(img, g.x * k, g.y * k, g.W * k, g.H * k);
+  sheet.draft.pic = cv.toDataURL("image/jpeg", 0.85);
+  delete sheet.draft.crop;
+  renderSheet();
+}
 
 $("#poster-file").addEventListener("change", async (e) => {
   const f = e.target.files[0];
@@ -430,8 +534,9 @@ function updateRateSheet(scrim) {
   const ld = scrim.querySelector("#f-logdate");
   ld.hidden = !cur;
   const di = scrim.querySelector("#f-date");
-  if (document.activeElement !== di) di.value = s.logged?.[key] || "";
-  scrim.querySelector("#f-date-lbl").textContent = s.logged?.[key] ? "Watched on" : "No date yet. Add one:";
+  const lg = s.logged?.[key];
+  if (document.activeElement !== di) di.value = isFullDate(lg) ? lg : "";
+  scrim.querySelector("#f-date-lbl").textContent = isFullDate(lg) ? "Watched on" : lg ? `Watched in ${lg}. Pick a day if you remember it:` : "No date yet. Add one:";
   const note = scrim.querySelector("#f-note");
   if (document.activeElement !== note) note.value = s.notes?.[sheet.season + ":" + sheet.ep] || "";
 }
@@ -459,6 +564,16 @@ function renderSheet() {
     document.body.appendChild(scrim);
     updateRateSheet(scrim);
     setTimeout(() => $("#f-rating")?.focus(), 50);
+    return;
+  } else if (sheet.type === "profile" && sheet.draft.crop) {
+    scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="Position your photo">
+      <div class="row"><h3 class="grow">Move and zoom</h3><button class="iconbtn" data-act="crop-cancel" aria-label="Cancel">✕</button></div>
+      <div class="crop"><div class="cropbox" id="cropbox"><img src="${sheet.draft.crop.src}" alt="" draggable="false"></div>
+        <div class="zoomrow"><span aria-hidden="true">−</span><input type="range" id="crop-zoom" min="1" max="5" step="0.01" value="${sheet.draft.crop.zoom}" aria-label="Zoom"><span aria-hidden="true">＋</span></div>
+        <p class="hint">Drag to move, pinch or use the slider to zoom.</p></div>
+      <div class="row"><button class="btn ghost" data-act="crop-cancel">Cancel</button><button class="btn primary grow" data-act="crop-done">Use photo</button></div></div>`;
+    document.body.appendChild(scrim);
+    requestAnimationFrame(paintCrop);
     return;
   } else if (sheet.type === "profile") {
     const d = sheet.draft;
@@ -568,6 +683,8 @@ document.addEventListener("click", (e) => {
     case "edit-profile": sheet = { type: "profile", draft: { username: profile.username, pic: profile.pic } }; renderSheet(); break;
     case "pick-avatar": $("#avatar-file").click(); break;
     case "clear-avatar": sheet.draft.pic = null; renderSheet(); break;
+    case "crop-cancel": delete sheet.draft.crop; renderSheet(); break;
+    case "crop-done": finishCrop(); break;
     case "save-profile": profile.username = sheet.draft.username.trim(); profile.pic = sheet.draft.pic; saveProfile(); sheet = null; render(); break;
     case "clear-fav": profile.favourites[sheet.slot] = null; saveProfile(); sheet = null; render(); break;
     case "close": flushNote(); sheet = null; renderSheet(); break;
@@ -665,7 +782,9 @@ document.addEventListener("change", (e) => {
   const s = structuredClone(shows.find((x) => x.id === view.id));
   const key = sheet.season + ":" + sheet.ep;
   s.logged = { ...(s.logged || {}) };
-  if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) s.logged[key] = e.target.value; else delete s.logged[key];
+  const prev = s.logged[key];
+  if (isFullDate(e.target.value)) s.logged[key] = e.target.value;
+  else if (prev) s.logged[key] = prev.slice(0, 4); // clearing the day keeps the year
   persist(s);
 });
 
@@ -693,6 +812,7 @@ $("#restore-file").addEventListener("change", async (e) => {
     const data = JSON.parse(await f.text());
     const list = Array.isArray(data) ? data : data.shows;
     if (!Array.isArray(list) || !list.every((x) => x.id && Array.isArray(x.seasons))) throw new Error();
+    fillOldDates(list);
     list.forEach((x) => { const i = shows.findIndex((s) => s.id === x.id); if (i >= 0) shows[i] = x; else shows.push(x); });
     saveLocal();
     if (data.profile && !Array.isArray(data)) { profile = normProfile(data.profile); saveProfile(); }
@@ -705,6 +825,7 @@ navigator.storage?.persist?.().catch(() => {});
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 shows = loadLocal();
+if (fillOldDates(shows)) saveLocal();
 profile = loadProfile();
 render();
 </script>
