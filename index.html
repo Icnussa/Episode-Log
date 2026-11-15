@@ -191,6 +191,31 @@ input[type=number] { width: 84px; }
 .avatar-pick { display: flex; gap: 14px; align-items: center; }
 .logdate { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); font-weight: 600; }
 .logdate input { padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); font-size: 16px; color: var(--fg); }
+/* Episode page (rate sheet): bigger once rated, with an optional banner photo at the top */
+.sheet.big { max-width: 640px; min-height: min(80vh, 760px); display: flex; flex-direction: column; }
+.sheet.big .nav { margin-top: auto; }
+.sheet.has-banner { padding-top: 0; }
+.banner { position: relative; flex: none; height: clamp(190px, 50vw, 280px); overflow: hidden; background: var(--surface);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))) calc(-1 * max(16px, env(safe-area-inset-right, 0px))); }
+.banner img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; display: block; transition: filter .2s; }
+/* Darken is a filter on the photo itself, so it is perfectly even edge to edge (no lighter corners or seams) */
+.banner.dark img { filter: brightness(.6) saturate(1.05); }
+.banner::after { content: ""; position: absolute; inset: -1px -1px -2px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, transparent 38%,
+    color-mix(in srgb, var(--surface) 25%, transparent) 55%, color-mix(in srgb, var(--surface) 62%, transparent) 75%,
+    color-mix(in srgb, var(--surface) 90%, transparent) 90%, var(--surface) 100%); }
+.sheet.has-banner .ephead { margin-top: -64px; position: relative; z-index: 1; }
+.sheet.has-banner .ephead h3 { text-shadow: 0 1px 12px var(--surface); }
+.sheet.has-banner .ephead .iconbtn { background: color-mix(in srgb, var(--surface) 75%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.banner-tools { display: grid; gap: 10px; }
+.banner-add { width: 100%; border: 1.5px dashed var(--line); background: transparent; border-radius: 14px; padding: 18px 12px; display: grid; justify-items: center; gap: 4px; color: var(--muted); font-weight: 700; }
+.banner-add svg { width: 26px; height: 26px; }
+.banner-add:active { transform: scale(.98); }
+.switch { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+.switch input { appearance: none; -webkit-appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--surface-2); position: relative; margin: 0; flex: none; transition: background .15s; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform .15s; }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(18px); }
 .backup { display: grid; justify-items: center; gap: 10px; margin-top: 32px; }
 .backup .row { display: flex; gap: 10px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -202,6 +227,7 @@ input[type=number] { width: 84px; }
 <div class="wrap" id="app"></div>
 <input type="file" id="poster-file" accept="image/*" hidden>
 <input type="file" id="avatar-file" accept="image/*" hidden>
+<input type="file" id="banner-file" accept="image/*" hidden>
 <input type="file" id="restore-file" accept="application/json,.json" hidden>
 
 <script>
@@ -285,6 +311,81 @@ async function removeShow(id) {
   shows = shows.filter((s) => s.id !== id);
   saveLocal();
 }
+
+/* ---------- episode banners (IndexedDB: photos are too big for localStorage) ---------- */
+// banners["showId|season:ep"] = { img: jpeg dataURI (max 1280px wide), dark: bool }
+let banners = {};
+const bKey = (showId, si, ei) => `${showId}|${si}:${ei}`;
+let dbP = null;
+function db() {
+  return dbP ||= new Promise((res, rej) => {
+    const r = indexedDB.open("episode-log-media", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("banners");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idb(mode, fn) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const tx = d.transaction("banners", mode), st = tx.objectStore("banners");
+    const out = fn(st);
+    tx.oncomplete = () => res(out?.result);
+    tx.onerror = tx.onabort = () => rej(tx.error);
+  });
+}
+async function loadBanners() {
+  try {
+    const d = await db();
+    await new Promise((res, rej) => {
+      const out = {}, cur = d.transaction("banners").objectStore("banners").openCursor();
+      cur.onsuccess = () => { const c = cur.result; if (c) { out[c.key] = c.value; c.continue(); } else { banners = out; res(); } };
+      cur.onerror = () => rej(cur.error);
+    });
+  } catch { banners = {}; }
+}
+async function putBanner(key, val) {
+  banners[key] = val;
+  try { await idb("readwrite", (st) => st.put(val, key)); }
+  catch { toast("Couldn't save the banner. Your phone may be out of space."); }
+}
+async function dropBanners(keys) {
+  keys = keys.filter((k) => banners[k]);
+  if (!keys.length) return;
+  keys.forEach((k) => delete banners[k]);
+  try { await idb("readwrite", (st) => keys.forEach((k) => st.delete(k))); } catch {}
+}
+// Shrink a camera-roll photo to at most 1280px wide and no taller than 4:3, as a ~150 KB JPEG.
+function readBanner(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const W = Math.min(1280, img.naturalWidth);
+      const scale = W / img.naturalWidth;
+      const fullH = img.naturalHeight * scale, H = Math.round(Math.min(fullH, W * 0.75));
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      c.getContext("2d").drawImage(img, 0, (H - fullH) / 2, W, fullH);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+    img.src = url;
+  });
+}
+let pendingBannerKey = null;
+$("#banner-file").addEventListener("change", async (e) => {
+  const f = e.target.files[0], key = pendingBannerKey;
+  e.target.value = "";
+  if (!f || !key) return;
+  try {
+    const img = await readBanner(f);
+    await putBanner(key, { img, dark: banners[key]?.dark ?? true });
+    renderSheet();
+  } catch { toast("That file isn't an image this browser can open. Try a JPG or PNG."); }
+});
+const PHOTO_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>`;
 
 /* ---------- poster handling ---------- */
 function readPoster(file, W = 400, H = 600) {
@@ -539,6 +640,29 @@ function updateRateSheet(scrim) {
   scrim.querySelector("#f-date-lbl").textContent = isFullDate(lg) ? "Watched on" : lg ? `Watched in ${lg}. Pick a day if you remember it:` : "No date yet. Add one:";
   const note = scrim.querySelector("#f-note");
   if (document.activeElement !== note) note.value = s.notes?.[sheet.season + ":" + sheet.ep] || "";
+  // Banner: shown at the top whenever one exists; the add/change controls appear once the episode is rated.
+  const b = banners[bKey(s.id, sheet.season, sheet.ep)];
+  const box = scrim.querySelector(".sheet");
+  box.classList.toggle("big", !!cur || !!b);
+  box.classList.toggle("has-banner", !!b);
+  const ban = scrim.querySelector("#f-banner");
+  ban.hidden = !b;
+  if (b) {
+    ban.classList.toggle("dark", b.dark !== false);
+    const im = ban.querySelector("img");
+    if (im.getAttribute("src") !== b.img) im.src = b.img;
+  } else ban.querySelector("img").removeAttribute("src");
+  const tools = scrim.querySelector("#f-banner-tools");
+  tools.hidden = !cur && !b;
+  const state = b ? "has:" + (b.dark !== false) : "none";
+  if (tools.dataset.state !== state) {
+    tools.dataset.state = state;
+    tools.innerHTML = b
+      ? `<label class="switch"><input type="checkbox" id="f-darken" ${b.dark !== false ? "checked" : ""}>Darken banner</label>
+         <div class="row"><button class="btn" data-act="pick-banner">${PHOTO_ICON.replace("<svg", '<svg width="18" height="18"')} Change banner</button>
+           <button class="btn ghost" data-act="clear-banner">Remove</button></div>`
+      : `<button class="banner-add" data-act="pick-banner">${PHOTO_ICON}<span>Add banner</span><small style="font-weight:500">Pick a photo from your camera roll</small></button>`;
+  }
 }
 
 function renderSheet() {
@@ -552,14 +676,16 @@ function renderSheet() {
   if (sheet.type === "rate") {
     scrim.dataset.key = sheet.season + ":" + sheet.ep;
     scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="Rate episode">
-      <div class="row"><h3 class="grow">S${sheet.season + 1} · Episode ${sheet.ep + 1}</h3>
+      <div class="banner" id="f-banner" hidden><img alt=""></div>
+      <div class="row ephead"><h3 class="grow">S${sheet.season + 1} · Episode ${sheet.ep + 1}</h3>
         <button class="iconbtn" data-act="close" aria-label="Close">✕</button></div>
       <div class="typed"><input type="text" id="f-rating" autocomplete="off" enterkeyhint="done" placeholder="Type 1–10, then Enter" aria-label="Rating out of 10">
         <button class="btn primary" data-act="apply-rating">Set</button></div>
       <p class="hint">Delete the number and press Enter to clear a rating.</p>
       <label class="logdate" id="f-logdate"><span id="f-date-lbl">Watched on</span><input type="date" id="f-date" max="${today()}"></label>
       <label class="field">Notes<textarea id="f-note" rows="3" maxlength="2000" placeholder="What stood out in this episode?"></textarea></label>
-      <div class="row"><button class="btn ghost" data-act="prev-ep">‹ Previous</button><span class="grow"></span>
+      <div class="banner-tools" id="f-banner-tools" hidden></div>
+      <div class="row nav"><button class="btn ghost" data-act="prev-ep">‹ Previous</button><span class="grow"></span>
         <button class="btn ghost" data-act="next-ep">Next ›</button></div></div>`;
     document.body.appendChild(scrim);
     updateRateSheet(scrim);
@@ -692,6 +818,8 @@ document.addEventListener("click", (e) => {
     case "backup": backup(); break;
     case "restore": $("#restore-file").click(); break;
     case "pick-poster": $("#poster-file").click(); break;
+    case "pick-banner": pendingBannerKey = bKey(view.id, sheet.season, sheet.ep); $("#banner-file").click(); break;
+    case "clear-banner": dropBanners([bKey(view.id, sheet.season, sheet.ep)]).then(renderSheet); break;
     case "clear-poster": sheet.draft.poster = null; renderSheet(); break;
     case "prev-ep": case "next-ep": flushNote(); advance(shows.find((x) => x.id === view.id), act === "next-ep" ? 1 : -1, true); renderSheet(); break;
     case "save": {
@@ -703,6 +831,7 @@ document.addEventListener("click", (e) => {
       const exists = ([k]) => { const [a, b] = k.split(":").map(Number); return a < d.seasons.length && b < d.seasons[a].length; };
       d.notes = Object.fromEntries(Object.entries(d.notes || {}).filter(exists));
       if (d.logged) d.logged = Object.fromEntries(Object.entries(d.logged).filter(exists));
+      dropBanners(Object.keys(banners).filter((k) => k.startsWith(d.id + "|") && !exists([k.split("|")[1]])));
       sheet = null;
       view = { name: "show", id: d.id };
       persist(d);
@@ -710,7 +839,7 @@ document.addEventListener("click", (e) => {
     }
     case "delete": sheet.confirmDelete = true; renderSheet(); break;
     case "delete-no": sheet.confirmDelete = false; renderSheet(); break;
-    case "delete-yes": { const id = sheet.draft.id, name = sheet.draft.name; profile.favourites = profile.favourites.map((f) => (f === id ? null : f)); saveProfile(); sheet = null; view = { name: "library" }; removeShow(id).then(render); render(); toast(`Deleted ${name}`); break; }
+    case "delete-yes": { const id = sheet.draft.id, name = sheet.draft.name; profile.favourites = profile.favourites.map((f) => (f === id ? null : f)); saveProfile(); sheet = null; view = { name: "library" }; removeShow(id).then(render); dropBanners(Object.keys(banners).filter((k) => k.startsWith(id + "|"))); render(); toast(`Deleted ${name}`); break; }
   }
 });
 
@@ -788,6 +917,12 @@ document.addEventListener("change", (e) => {
   persist(s);
 });
 
+document.addEventListener("change", (e) => {
+  if (e.target.id !== "f-darken" || sheet?.type !== "rate") return;
+  const key = bKey(view.id, sheet.season, sheet.ep);
+  if (banners[key]) putBanner(key, { ...banners[key], dark: e.target.checked }).then(renderSheet);
+});
+
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.id === "f-rating") { e.preventDefault(); applyTyped(); return; }
   if (e.key === "Escape" && sheet) { flushNote(); sheet = null; renderSheet(); }
@@ -795,7 +930,7 @@ document.addEventListener("keydown", (e) => {
 
 async function backup() {
   const name = "episode-log-backup-" + new Date().toISOString().slice(0, 10) + ".json";
-  const file = new File([JSON.stringify({ app: "episode-log", version: 2, shows, profile })], name, { type: "application/json" });
+  const file = new File([JSON.stringify({ app: "episode-log", version: 3, shows, profile, banners })], name, { type: "application/json" });
   try {
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Episode Log backup" }); return; }
   } catch (e) { if (e.name === "AbortError") return; }
@@ -816,6 +951,9 @@ $("#restore-file").addEventListener("change", async (e) => {
     list.forEach((x) => { const i = shows.findIndex((s) => s.id === x.id); if (i >= 0) shows[i] = x; else shows.push(x); });
     saveLocal();
     if (data.profile && !Array.isArray(data)) { profile = normProfile(data.profile); saveProfile(); }
+    if (data.banners && typeof data.banners === "object" && !Array.isArray(data)) {
+      for (const [k, v] of Object.entries(data.banners)) if (typeof v?.img === "string" && v.img.startsWith("data:image/")) await putBanner(k, { img: v.img, dark: v.dark !== false });
+    }
     view = { name: "library" }; render();
     toast(`Restored ${list.length} series`);
   } catch { toast("That file isn't an Episode Log backup."); }
@@ -828,6 +966,7 @@ shows = loadLocal();
 if (fillOldDates(shows)) saveLocal();
 profile = loadProfile();
 render();
+loadBanners();
 </script>
 
 </body>
